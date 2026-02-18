@@ -44,18 +44,19 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Prepare signing config
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          ALIAS: ${{ secrets.ALIAS }}
+      - name: Generate temporary keystore
         run: |
-          echo "$SIGNING_KEY" | base64 -d > android/app/release.keystore
+          keytool -genkey -v -keystore android/app/release.keystore \
+            -alias release -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=Subway Simulator, OU=Dev, O=Dev, L=City, S=State, C=CN"
+
+      - name: Configure signing
+        run: |
           echo "RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
-          echo "RELEASE_STORE_PASSWORD=$KEY_STORE_PASSWORD" >> android/gradle.properties
-          echo "RELEASE_KEY_ALIAS=$ALIAS" >> android/gradle.properties
-          echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> android/gradle.properties
+          echo "RELEASE_STORE_PASSWORD=android" >> android/gradle.properties
+          echo "RELEASE_KEY_ALIAS=release" >> android/gradle.properties
+          echo "RELEASE_KEY_PASSWORD=android" >> android/gradle.properties
 
       - name: Update build.gradle for signing
         run: |

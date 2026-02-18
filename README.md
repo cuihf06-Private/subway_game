@@ -17,50 +17,36 @@
 
 ## 项目说明
 
-项目使用 Capacitor 将网页游戏打包成 Android APK。所有网页资源（HTML、音频文件）会在构建时自动复制到 `www` 目录，该目录已添加到 `.gitignore` 中。
+项目使用 Capacitor 将网页游戏打包成 Android APK。GitHub Actions 会在构建时自动创建 `www` 目录并复制所有网页资源，无需手动配置签名密钥。
 
 ## 打包成 Android APK
 
-### 前置要求
+### 自动构建
 
-1. 生成签名密钥（用于签名 APK）：
-
-```bash
-keytool -genkey -v -keystore release.keystore -alias release -keyalg RSA -keysize 2048 -validity 10000
-```
-
-2. 将密钥转换为 Base64：
+每次推送到 `main` 分支都会自动触发构建：
 
 ```bash
-base64 release.keystore > release.keystore.base64
+git add .
+git commit -m "你的提交信息"
+git push origin main
 ```
 
-3. 在 GitHub 仓库设置中添加以下 Secrets：
-   - `SIGNING_KEY`: release.keystore.base64 文件的内容
-   - `ALIAS`: 密钥别名（例如：release）
-   - `KEY_STORE_PASSWORD`: keystore 密码
-   - `KEY_PASSWORD`: 密钥密码
+构建完成后，在 GitHub Actions 页面下载 APK。
 
-### 触发构建
+### 创建正式版本
 
-有两种方式触发 APK 构建：
-
-#### 方式 1: 创建 Git Tag（推荐）
+推送 tag 会自动创建 GitHub Release：
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-#### 方式 2: 手动触发
+APK 会自动发布到 GitHub Releases 页面。
 
-1. 进入 GitHub 仓库的 Actions 页面
-2. 选择 "Build Android APK" workflow
-3. 点击 "Run workflow" 按钮
+### 手动触发
 
-### 下载 APK
-
-构建完成后，APK 文件会自动发布到 GitHub Releases 页面。
+在 GitHub Actions 页面点击 "Run workflow" 按钮。
 
 ## 本地开发
 
@@ -78,7 +64,12 @@ npx cap add android
 
 ### 同步代码到 Android
 
+首先创建 www 目录并复制文件：
+
 ```bash
+mkdir -p www
+cp index.html www/
+cp *.mp3 www/
 npx cap sync android
 ```
 
