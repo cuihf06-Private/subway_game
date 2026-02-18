@@ -168,16 +168,18 @@
             transform: translateX(-50%) translateZ(-400px); /* 3D后移 */
             background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%); /* 渐变背景 */
             overflow: hidden; /* 隐藏溢出 */
+            width: 100vw; /* 默认宽度，防止初始抖动 */
+            max-width: 570px; /* 横屏最大宽度与psd-system一致 */
         }
 
         /* 竖屏隧道 */
         @media (orientation: portrait) {
-            .tunnel { width: 205px; height: 55%; } /* 竖屏尺寸 */
+            .tunnel { width: 410px; max-width: 410px; height: 55%; } /* 竖屏宽度与psd-system一致 */
         }
 
         /* 横屏隧道 */
         @media (orientation: landscape) {
-            .tunnel { width: 570px; height: 55%; } /* 横屏尺寸 */
+            .tunnel { width: 570px; max-width: 570px; height: 55%; } /* 横屏宽度与psd-system一致 */
         }
 
         .tunnel-lights { position: absolute; width: 100%; height: 100%; } /* 隧道灯光容器 */
@@ -256,7 +258,7 @@
 
         /* 横屏 - 两个门，每个128px，间距200px */
         @media (orientation: landscape) {
-            .train-doors { gap: 200px; } /* 两门间距 */
+            .train-doors { gap: 150px; } /* 两门间距 */
         }
 
         .train-door-unit {
