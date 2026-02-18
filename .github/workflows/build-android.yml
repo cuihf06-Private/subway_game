@@ -51,24 +51,17 @@ jobs:
             -storepass android -keypass android \
             -dname "CN=Subway Simulator, OU=Dev, O=Dev, L=City, S=State, C=CN"
 
-      - name: Configure signing
-        run: |
-          echo "RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
-          echo "RELEASE_STORE_PASSWORD=android" >> android/gradle.properties
-          echo "RELEASE_KEY_ALIAS=release" >> android/gradle.properties
-          echo "RELEASE_KEY_PASSWORD=android" >> android/gradle.properties
-
       - name: Update build.gradle for signing
         run: |
-          cat >> android/app/build.gradle << 'EOF'
+          cat >> android/app/build.gradle << 'GRADLE_EOF'
 
           android {
               signingConfigs {
                   release {
-                      storeFile file(project.property('RELEASE_STORE_FILE'))
-                      storePassword project.property('RELEASE_STORE_PASSWORD')
-                      keyAlias project.property('RELEASE_KEY_ALIAS')
-                      keyPassword project.property('RELEASE_KEY_PASSWORD')
+                      storeFile file('release.keystore')
+                      storePassword 'android'
+                      keyAlias 'release'
+                      keyPassword 'android'
                   }
               }
               buildTypes {
@@ -77,7 +70,7 @@ jobs:
                   }
               }
           }
-          EOF
+          GRADLE_EOF
 
       - name: Build signed Android APK
         run: |
@@ -101,9 +94,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: subway-simulator-apk
-          path: subway-simulator-*.apk
