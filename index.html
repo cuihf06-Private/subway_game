@@ -211,6 +211,8 @@
         .train.dir-left {
             left: calc(50% + 130vw); /* 初始在右侧屏幕外 */
             transition: left 3s cubic-bezier(0.4, 0, 0.2, 1); /* 动画 */
+            /* 修复离站动画起始位置 */
+            transform: translateZ(-200px) translateX(-50%);
         }
 
         .train.dir-left.arrived {
@@ -224,6 +226,8 @@
         .train.dir-right {
             left: calc(50% - 130vw); /* 初始在左侧屏幕外 */
             transition: left 3s cubic-bezier(0.4, 0, 0.2, 1); /* 动画 */
+            /* 修复离站动画起始位置 */
+            transform: translateZ(-200px) translateX(-50%);
         }
 
         .train.dir-right.arrived {
@@ -751,7 +755,10 @@
             speedLines.classList.add('active'); // 显示速度线
             
             // 从当前停靠位置开始驶出
+            // 保证离站动画起始时有translateX(-50%)
             train.classList.remove('arrived'); // 移除到站类
+            // 强制保留transform: translateX(-50%)
+            train.style.transform = 'translateZ(-200px) translateX(-50%)';
             train.classList.add('departed'); // 添加离站类
             
             setTimeout(() => {
@@ -763,6 +770,7 @@
                 // 重置列车到另一侧屏幕外，准备下次进站
                 setTimeout(() => {
                     train.classList.remove('departed'); // 移除离站类
+                    train.style.transform = '';
                     void train.offsetWidth; // 强制重绘
                 }, 100);
                 
