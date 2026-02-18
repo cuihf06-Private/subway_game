@@ -158,12 +158,13 @@
         /* 3D场景 */
         .scene {
             width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+            top: 10px;
         } /* 3D场景容器 */
 
         /* 隧道背景 - 与屏蔽门区域完全一致 */
         .tunnel {
             position: absolute; /* 绝对定位 */
-            bottom: 15%; /* 距底部15% */
+            top: 0; /* 顶部对齐 */
             left: 50%; /* 居中 */
             transform: translateX(-50%) translateZ(-400px); /* 3D后移 */
             background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%); /* 渐变背景 */
@@ -191,7 +192,7 @@
         /* 列车 */
         .train {
             position: absolute; /* 绝对定位 */
-            bottom: 15%; /* 距底部15% */
+            top: 0; /* 顶部对齐 */
             height: 55%; /* 高度55% */
             transform: translateZ(-200px); /* 3D后移 */
             transform-style: preserve-3d; /* 保持3D */
@@ -284,8 +285,9 @@
 
         /* 屏蔽门系统 */
         .psd-system {
-            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%) translateZ(50px); height: 55%;
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%) translateZ(50px); height: 55%;
             display: flex; justify-content: center; align-items: flex-end;
+            z-index: 2;
         } /* 屏蔽门系统容器 */
 
         /* 竖屏屏蔽门 */
@@ -337,8 +339,9 @@
 
         /* 站台 */
         .platform {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 15%;
+            position: absolute; top: 55%; left: 0; width: 100%; height: 15%;
             background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%); transform: translateZ(100px);
+            z-index: 1;
         } /* 站台区域 */
 
         .platform-floor { width: 100%; height: 100%; background: linear-gradient(0deg, #2a2a2a 0%, #3a3a3a 100%); } /* 站台地面 */
@@ -352,6 +355,7 @@
         /* 速度线 */
         .speed-lines {
             position: absolute; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10;
+            top: 0;
         } /* 速度线容器 */
 
         .speed-lines.active { opacity: 1; } /* 激活速度线 */
