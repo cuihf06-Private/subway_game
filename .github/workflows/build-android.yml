@@ -2,6 +2,8 @@ name: Build Android APK
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -47,27 +49,40 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Sign APK with jarsigner
         env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Rename APK
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
         run: |
-          mv ${{steps.sign_app.outputs.signedReleaseFile}} subway-simulator-${{ github.ref_name }}.apk
+          echo "$SIGNING_KEY" | base64 -d > release.keystore
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore release.keystore \
+            -storepass "$KEY_STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            "$ALIAS"
+
+      - name: Zipalign APK
+        run: |
+          $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            subway-simulator-signed.apk
+
+      - name: Rename APK with version
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            mv subway-simulator-signed.apk subway-simulator-${{ github.ref_name }}.apk
+          else
+            mv subway-simulator-signed.apk subway-simulator-${GITHUB_SHA::7}.apk
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: subway-simulator-${{ github.ref_name }}.apk
+          files: subway-simulator-*.apk
           draft: false
           prerelease: false
         env:
@@ -77,4 +92,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: subway-simulator-apk
-          path: subway-simulator-${{ github.ref_name }}.apk
+          path: subway-simulator-*.apk
