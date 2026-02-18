@@ -31,18 +31,7 @@ git commit -m "你的提交信息"
 git push origin main
 ```
 
-构建完成后，会自动创建一个 prerelease，可以在 Releases 页面下载 APK。
-
-### 创建正式版本
-
-推送 tag 会创建正式版本的 Release：
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-APK 会作为正式版本发布到 GitHub Releases 页面。
+构建完成后，会自动创建一个 Release（版本号格式：v2025.02.18-1430），可以在 Releases 页面下载 APK。
 
 ### 手动触发
 

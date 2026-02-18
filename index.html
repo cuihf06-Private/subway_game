@@ -525,31 +525,41 @@
 
     <script>
         // ==================== 音频 ====================
-        const dingdong = new Audio('./dingdong.mp3'); // 叮咚提示音
-        const announceLeft = new Audio('./announce_left.mp3'); // 左方向报站音
-        const announceRight = new Audio('./announce_right.mp3'); // 右方向报站音
-        const doorOpenSound = new Audio('./door_open.mp3'); // 开门音效
-        const doorCloseSound = new Audio('./door_close.mp3'); // 关门音效
+        // 使用绝对路径并添加预加载
+        const dingdong = new Audio('./dingdong.mp3');
+        dingdong.preload = 'auto';
+
+        const announceLeft = new Audio('./announce_left.mp3');
+        announceLeft.preload = 'auto';
+
+        const announceRight = new Audio('./announce_right.mp3');
+        announceRight.preload = 'auto';
+
+        const doorOpenSound = new Audio('./door_open.mp3');
+        doorOpenSound.preload = 'auto';
+
+        const doorCloseSound = new Audio('./door_close.mp3');
+        doorCloseSound.preload = 'auto';
 
         function playDingdong() { // 播放叮咚音
             dingdong.currentTime = 0; // 重置播放进度
-            dingdong.play().catch(() => {}); // 播放音频
+            dingdong.play().catch(err => console.error('播放叮咚音失败:', err)); // 播放音频
         }
 
         function playAnnounce(dir) { // 播放报站音
             const audio = dir === 'left' ? announceLeft : announceRight; // 根据方向选择音频
             audio.currentTime = 0; // 重置播放进度
-            audio.play().catch(() => {}); // 播放音频
+            audio.play().catch(err => console.error('播放报站音失败:', err)); // 播放音频
         }
 
         function playDoorOpen() { // 播放开门音
             doorOpenSound.currentTime = 0;
-            doorOpenSound.play().catch(() => {});
+            doorOpenSound.play().catch(err => console.error('播放开门音失败:', err));
         }
 
         function playDoorClose() { // 播放关门音
             doorCloseSound.currentTime = 0;
-            doorCloseSound.play().catch(() => {});
+            doorCloseSound.play().catch(err => console.error('播放关门音失败:', err));
         }
 
         // ==================== 线路图 ====================

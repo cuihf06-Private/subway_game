@@ -79,21 +79,41 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon
 
+      - name: Generate version info
+        id: version
+        run: |
+          VERSION=$(date +'%Y.%m.%d-%H%M')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit_msg=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+          echo "commit_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Rename APK with version
         run: |
-          if [ "${{ github.ref_type }}" == "tag" ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk subway-simulator-${{ github.ref_name }}.apk
-          else
-            cp android/app/build/outputs/apk/release/app-release.apk subway-simulator-${GITHUB_SHA::7}.apk
-          fi
+          cp android/app/build/outputs/apk/release/app-release.apk subway-simulator-${{ steps.version.outputs.version }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.sha) }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || format('Build {0}', github.sha) }}
+          tag_name: ${{ steps.version.outputs.release_name }}
+          name: 地铁模拟器 ${{ steps.version.outputs.release_name }}
+          body: |
+            ## 📱 地铁模拟器 Android APK
+
+            **版本**: ${{ steps.version.outputs.release_name }}
+            **构建时间**: ${{ github.event.head_commit.timestamp }}
+            **提交信息**: ${{ steps.version.outputs.commit_msg }}
+            **提交哈希**: ${{ steps.version.outputs.commit_short }}
+
+            ### 下载
+            - [subway-simulator-${{ steps.version.outputs.version }}.apk](subway-simulator-${{ steps.version.outputs.version }}.apk)
+
+            ### 安装说明
+            1. 下载 APK 文件
+            2. 在 Android 设备上安装（需要允许安装未知来源应用）
+            3. 打开应用即可体验地铁模拟器
           files: subway-simulator-*.apk
           draft: false
-          prerelease: ${{ github.ref_type != 'tag' }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
