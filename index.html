@@ -1,603 +1,396 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>地铁模拟器 - Subway Simulator</title>
+<!DOCTYPE html> <!-- 声明文档类型为HTML -->
+<html lang="zh-CN"> <!-- 设置页面语言为中文 -->
+<head> <!-- 页面头部信息 -->
+    <meta charset="UTF-8"> <!-- 设置字符编码为UTF-8 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <!-- 移动端适配 -->
+    <title>地铁模拟器 - Subway Simulator</title> <!-- 网页标题 -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root { /* 定义全局CSS变量 */
+            --platform-gray: #3a3a3a; /* 站台灰色 */
+            --safety-yellow: #ffc107; /* 安全黄 */
+            --glass-blue: rgba(135, 206, 235, 0.22); /* 玻璃蓝 */
+            --glass-border: rgba(255, 255, 255, 0.25); /* 玻璃边框 */
+            --line-color: #009944; /* 线路主色 */
+            --train-silver: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 30%, #a0a0a0 60%, #d0d0d0 100%); /* 列车银色渐变 */
         }
 
-        :root {
-            --platform-gray: #3a3a3a;
-            --safety-yellow: #ffc107;
-            --glass-blue: rgba(135, 206, 235, 0.22);
-            --glass-border: rgba(255, 255, 255, 0.25);
-            --line-color: #009944;
-            --train-silver: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 30%, #a0a0a0 60%, #d0d0d0 100%);
-        }
-
-        body {
-            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
-            background: #0a0a15;
-            min-height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        body { /* 页面主体样式 */
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; /* 字体 */
+            background: #0a0a15; /* 背景色 */
+            min-height: 100vh; /* 最小高度 */
+            overflow: hidden; /* 隐藏滚动条 */
+            display: flex; /* 弹性布局 */
+            flex-direction: column; /* 垂直排列 */
+            align-items: center; /* 居中 */
         }
 
         /* 顶部标题 */
         .main-title {
-            position: fixed;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            text-shadow: 0 0 15px rgba(135, 206, 235, 0.6);
-            z-index: 500;
-            letter-spacing: 3px;
+            position: fixed; /* 固定定位 */
+            top: 8px; /* 距顶部8px */
+            left: 50%; /* 居中 */
+            transform: translateX(-50%); /* 水平居中 */
+            color: white; /* 白色字体 */
+            font-size: 20px; /* 字号 */
+            font-weight: bold; /* 加粗 */
+            text-shadow: 0 0 15px rgba(135, 206, 235, 0.6); /* 发光阴影 */
+            z-index: 500; /* 层级高 */
+            letter-spacing: 3px; /* 字间距 */
         }
 
         /* 线路图区域 */
         .route-display {
-            position: fixed;
-            top: 45px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 95%;
-            max-width: 550px;
-            background: linear-gradient(180deg, #0f1a2e 0%, #1a2a4a 100%);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            z-index: 400;
-            overflow: hidden;
+            position: fixed; /* 固定定位 */
+            top: 45px; /* 距顶部45px */
+            left: 50%; /* 居中 */
+            transform: translateX(-50%); /* 水平居中 */
+            width: 95%; /* 宽度95% */
+            max-width: 550px; /* 最大宽度550px */
+            background: linear-gradient(180deg, #0f1a2e 0%, #1a2a4a 100%); /* 渐变背景 */
+            border: 1px solid rgba(255,255,255,0.1); /* 边框 */
+            border-radius: 8px; /* 圆角 */
+            z-index: 400; /* 层级 */
+            overflow: hidden; /* 隐藏溢出 */
         }
 
-        .route-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border-bottom: 2px solid var(--line-color);
+        .route-header { /* 线路图头部 */
+            display: flex; /* 弹性布局 */
+            justify-content: space-between; /* 两端对齐 */
+            align-items: center; /* 垂直居中 */
+            padding: 6px 12px; /* 内边距 */
+            background: rgba(0, 0, 0, 0.3); /* 半透明背景 */
+            border-bottom: 2px solid var(--line-color); /* 底部线条 */
         }
 
-        .route-direction {
-            font-size: 11px;
-            color: #aaa;
-            flex: 1;
-        }
+        .route-direction { font-size: 11px; color: #aaa; flex: 1; } /* 方向文字样式 */
 
-        .route-direction.left { text-align: left; }
-        .route-direction.right { text-align: right; }
+        .route-direction.left { text-align: left; } /* 左侧对齐 */
+        .route-direction.right { text-align: right; } /* 右侧对齐 */
 
-        .route-center {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .route-center { display: flex; align-items: center; gap: 10px; } /* 中间区域 */
 
         .line-badge {
-            background: var(--line-color);
-            color: white;
-            padding: 3px 10px;
-            border-radius: 3px;
-            font-weight: bold;
-            font-size: 13px;
+            background: var(--line-color); /* 线路色背景 */
+            color: white; /* 白色字体 */
+            padding: 3px 10px; /* 内边距 */
+            border-radius: 3px; /* 圆角 */
+            font-weight: bold; /* 加粗 */
+            font-size: 13px; /* 字号 */
         }
 
-        .current-station {
-            color: #ffc107;
-            font-size: 14px;
-            font-weight: bold;
-        }
+        .current-station { color: #ffc107; font-size: 14px; font-weight: bold; } /* 当前站点样式 */
 
         /* 带状线路图 */
         .route-strip {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px 15px;
-            gap: 0;
+            display: flex; /* 弹性布局 */
+            justify-content: center; /* 居中 */
+            align-items: center; /* 垂直居中 */
+            padding: 10px 15px; /* 内边距 */
+            gap: 0; /* 间距为0 */
         }
 
         .station {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
+            display: flex; /* 弹性布局 */
+            flex-direction: column; /* 垂直排列 */
+            align-items: center; /* 居中 */
+            position: relative; /* 相对定位 */
         }
 
         .station-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #555;
-            border: 2px solid #777;
-            position: relative;
-            z-index: 2;
-        }
+            width: 10px; height: 10px; border-radius: 50%; background: #555; border: 2px solid #777; position: relative; z-index: 2;
+        } /* 站点圆点 */
 
         .station.current .station-dot {
-            background: var(--line-color);
-            border-color: #00ff66;
-            box-shadow: 0 0 10px var(--line-color);
-            animation: pulseDot 1.5s infinite;
+            background: var(--line-color); /* 当前站点高亮 */
+            border-color: #00ff66; /* 绿色边框 */
+            box-shadow: 0 0 10px var(--line-color); /* 发光效果 */
+            animation: pulseDot 1.5s infinite; /* 呼吸动画 */
         }
 
         @keyframes pulseDot {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.25); }
+            0%, 100% { transform: scale(1); } /* 初始/结束缩放1倍 */
+            50% { transform: scale(1.25); } /* 中间放大1.25倍 */
         }
 
-        .station-name {
-            color: #888;
-            font-size: 11px;
-            margin-top: 4px;
-            white-space: nowrap;
-        }
+        .station-name { color: #888; font-size: 11px; margin-top: 4px; white-space: nowrap; } /* 站点名称样式 */
 
-        .station.current .station-name {
-            color: #ffc107;
-            font-weight: bold;
-        }
+        .station.current .station-name { color: #ffc107; font-weight: bold; } /* 当前站点名称高亮 */
 
-        .station-line {
-            width: 55px;
-            height: 3px;
-            background: #555;
-            margin-top: -16px;
-        }
+        .station-line { width: 55px; height: 3px; background: #555; margin-top: -16px; } /* 站点间连线 */
 
         /* 状态指示器 */
         .status-indicator {
-            position: fixed;
-            top: 155px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 5px 16px;
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 15px;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 300;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s;
+            position: fixed; /* 固定定位 */
+            top: 155px; /* 距顶部155px */
+            left: 50%; /* 居中 */
+            transform: translateX(-50%); /* 水平居中 */
+            padding: 5px 16px; /* 内边距 */
+            background: rgba(0, 0, 0, 0.7); /* 半透明背景 */
+            border-radius: 15px; /* 圆角 */
+            color: white; /* 白色字体 */
+            font-size: 12px; /* 字号 */
+            font-weight: bold; /* 加粗 */
+            z-index: 300; /* 层级 */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* 边框 */
+            transition: all 0.3s; /* 过渡动画 */
         }
 
-        .status-indicator.arriving { border-color: #0099ff; color: #66ccff; }
-        .status-indicator.boarding { border-color: #00ff66; color: #66ff99; }
-        .status-indicator.departing { border-color: #ff6600; color: #ffaa66; }
+        .status-indicator.arriving { border-color: #0099ff; color: #66ccff; } /* 进站状态 */
+        .status-indicator.boarding { border-color: #00ff66; color: #66ff99; } /* 上下客状态 */
+        .status-indicator.departing { border-color: #ff6600; color: #ffaa66; } /* 离站状态 */
 
         /* 游戏容器 - 紧贴在线路图下方 */
         .game-container {
-            position: fixed;
-            top: 185px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 95%;
-            max-width: 900px;
-            height: calc(100vh - 280px);
-            perspective: 1500px;
-            perspective-origin: 50% 50%;
-            overflow: hidden;
+            position: fixed; /* 固定定位 */
+            top: 185px; /* 距顶部185px */
+            left: 50%; /* 居中 */
+            transform: translateX(-50%); /* 水平居中 */
+            width: 95%; /* 宽度95% */
+            max-width: 900px; /* 最大宽度900px */
+            height: calc(100vh - 280px); /* 高度自适应 */
+            perspective: 1500px; /* 3D视角距离 */
+            perspective-origin: 50% 50%; /* 视角中心 */
+            overflow: hidden; /* 隐藏溢出 */
         }
 
         /* 3D场景 */
         .scene {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-        }
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+        } /* 3D场景容器 */
 
         /* 隧道背景 - 与屏蔽门区域完全一致 */
         .tunnel {
-            position: absolute;
-            bottom: 15%;
-            left: 50%;
-            transform: translateX(-50%) translateZ(-400px);
-            background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%);
-            overflow: hidden;
+            position: absolute; /* 绝对定位 */
+            bottom: 15%; /* 距底部15% */
+            left: 50%; /* 居中 */
+            transform: translateX(-50%) translateZ(-400px); /* 3D后移 */
+            background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%); /* 渐变背景 */
+            overflow: hidden; /* 隐藏溢出 */
         }
 
         /* 竖屏隧道 */
         @media (orientation: portrait) {
-            .tunnel {
-                width: 205px;
-                height: 55%;
-            }
+            .tunnel { width: 205px; height: 55%; } /* 竖屏尺寸 */
         }
 
         /* 横屏隧道 */
         @media (orientation: landscape) {
-            .tunnel {
-                width: 570px;
-                height: 55%;
-            }
+            .tunnel { width: 570px; height: 55%; } /* 横屏尺寸 */
         }
 
-        .tunnel-lights {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
+        .tunnel-lights { position: absolute; width: 100%; height: 100%; } /* 隧道灯光容器 */
 
         .tunnel-light {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: #fff;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #fff, 0 0 20px rgba(135, 206, 235, 0.4);
-        }
+            position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff, 0 0 20px rgba(135, 206, 235, 0.4);
+        } /* 隧道灯光点 */
 
         /* 列车 */
         .train {
-            position: absolute;
-            bottom: 15%;
-            height: 55%;
-            transform: translateZ(-200px);
-            transform-style: preserve-3d;
+            position: absolute; /* 绝对定位 */
+            bottom: 15%; /* 距底部15% */
+            height: 55%; /* 高度55% */
+            transform: translateZ(-200px); /* 3D后移 */
+            transform-style: preserve-3d; /* 保持3D */
         }
 
         /* 竖屏列车 */
         @media (orientation: portrait) {
-            .train {
-                width: 205px;
-            }
+            .train { width: 205px; } /* 竖屏宽度 */
         }
 
         /* 横屏列车 */
         @media (orientation: landscape) {
-            .train {
-                width: 570px;
-            }
+            .train { width: 570px; } /* 横屏宽度 */
         }
 
         /* 向左行驶 */
         .train.dir-left {
-            left: calc(50% + 60vw);
-            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1);
+            left: calc(50% + 60vw); /* 初始在右侧屏幕外 */
+            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1); /* 动画 */
         }
 
         .train.dir-left.arrived {
-            left: 50%;
-            transform: translateZ(-200px) translateX(-50%);
+            left: 50%; /* 到达中间 */
+            transform: translateZ(-200px) translateX(-50%); /* 居中 */
         }
 
-        .train.dir-left.departed {
-            left: calc(50% - 60vw);
-        }
+        .train.dir-left.departed { left: calc(50% - 60vw); } /* 离开到左侧屏幕外 */
 
         /* 向右行驶 */
         .train.dir-right {
-            left: calc(50% - 60vw);
-            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1);
+            left: calc(50% - 60vw); /* 初始在左侧屏幕外 */
+            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1); /* 动画 */
         }
 
         .train.dir-right.arrived {
-            left: 50%;
-            transform: translateZ(-200px) translateX(-50%);
+            left: 50%; /* 到达中间 */
+            transform: translateZ(-200px) translateX(-50%); /* 居中 */
         }
 
-        .train.dir-right.departed {
-            left: calc(50% + 60vw);
-        }
+        .train.dir-right.departed { left: calc(50% + 60vw); } /* 离开到右侧屏幕外 */
 
-        .train-body {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-        }
+        .train-body { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; } /* 列车主体 */
 
         .train-side {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: var(--train-silver);
-            border-radius: 8px 8px 0 0;
-            box-shadow: 
-                inset 0 2px 10px rgba(255,255,255,0.4),
-                inset 0 -2px 10px rgba(0,0,0,0.3),
-                0 5px 15px rgba(0,0,0,0.5);
+            position: absolute; width: 100%; height: 100%; background: var(--train-silver); border-radius: 8px 8px 0 0;
+            box-shadow: inset 0 2px 10px rgba(255,255,255,0.4), inset 0 -2px 10px rgba(0,0,0,0.3), 0 5px 15px rgba(0,0,0,0.5);
             overflow: hidden;
-        }
+        } /* 列车侧面 */
 
         .train-stripe {
-            position: absolute;
-            top: 45%;
-            left: 0;
-            width: 100%;
-            height: 4%;
+            position: absolute; top: 45%; left: 0; width: 100%; height: 4%;
             background: linear-gradient(90deg, var(--line-color) 0%, #00cc66 50%, var(--line-color) 100%);
-        }
+        } /* 列车腰线 */
 
         .train-doors {
-            position: absolute;
-            width: 100%;
-            height: 90%;
-            top: 5%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+            position: absolute; width: 100%; height: 90%; top: 5%; display: flex; justify-content: center; align-items: center;
+        } /* 列车门区域 */
 
         /* 竖屏 - 一个门，宽度128px */
         @media (orientation: portrait) {
-            .train-door-unit:nth-child(2) {
-                display: none;
-            }
-            .train-doors {
-                gap: 0;
-            }
+            .train-door-unit:nth-child(2) { display: none; } /* 只显示一个门 */
+            .train-doors { gap: 0; } /* 无间距 */
         }
 
         /* 横屏 - 两个门，每个128px，间距200px */
         @media (orientation: landscape) {
-            .train-doors {
-                gap: 200px;
-            }
+            .train-doors { gap: 200px; } /* 两门间距 */
         }
 
         .train-door-unit {
-            width: 128px;
-            height: 90%;
-            position: relative;
-            background: #222;
-            border: 2px solid #444;
-            border-radius: 2px;
-        }
+            width: 128px; height: 90%; position: relative; background: #222; border: 2px solid #444; border-radius: 2px;
+        } /* 列车门单元 */
 
         .train-door-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-        }
+            width: 100%; height: 100%; display: flex;
+        } /* 列车门容器 */
 
         .train-door {
-            flex: 1;
-            height: 100%;
-            background: linear-gradient(90deg, #1a1a2e 0%, #2a2a3e 50%, #1a1a2e 100%);
-            border: 1px solid #333;
-            position: relative;
-            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+            flex: 1; height: 100%; background: linear-gradient(90deg, #1a1a2e 0%, #2a2a3e 50%, #1a1a2e 100%);
+            border: 1px solid #333; position: relative; transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        } /* 列车门 */
 
-        .train-door.left.open {
-            transform: translateX(-90%);
-        }
+        .train-door.left.open { transform: translateX(-90%); } /* 左门开门动画 */
 
-        .train-door.right.open {
-            transform: translateX(90%);
-        }
+        .train-door.right.open { transform: translateX(90%); } /* 右门开门动画 */
 
         /* 屏蔽门系统 */
         .psd-system {
-            position: absolute;
-            bottom: 15%;
-            left: 50%;
-            transform: translateX(-50%) translateZ(50px);
-            height: 55%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-        }
+            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%) translateZ(50px); height: 55%;
+            display: flex; justify-content: center; align-items: flex-end;
+        } /* 屏蔽门系统容器 */
 
         /* 竖屏屏蔽门 */
         @media (orientation: portrait) {
-            .psd-system {
-                width: 205px;
-            }
+            .psd-system { width: 205px; } /* 竖屏宽度 */
             .psd-mid-glass,
-            .psd-door-area:nth-child(3) {
-                display: none !important;
-            }
+            .psd-door-area-2 { display: none !important; } /* 隐藏第二组门 */
+            .psd-door-area-1 { margin: 0 auto; } /* 居中显示 */
         }
 
         /* 横屏屏蔽门 */
         @media (orientation: landscape) {
-            .psd-system {
-                width: 570px;
-            }
+            .psd-system { width: 570px; } /* 横屏宽度 */
             .psd-mid-glass,
-            .psd-door-area:nth-child(3) {
-                display: flex !important;
-            }
+            .psd-door-area:nth-child(3) { display: flex !important; } /* 显示中间门 */
         }
 
         .psd-whole {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            background: rgba(200, 220, 240, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 2px;
-        }
+            width: 100%; height: 100%; display: flex; background: rgba(200, 220, 240, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 2px;
+        } /* 屏蔽门整体 */
 
         .psd-side-glass {
-            flex: 1;
-            height: 100%;
-            background: var(--glass-blue);
-            border-left: 1px solid var(--glass-border);
-            border-right: 1px solid var(--glass-border);
-        }
+            flex: 1; height: 100%; background: var(--glass-blue); border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);
+        } /* 屏蔽门侧玻璃 */
 
         .psd-mid-glass {
-            display: none;
-            flex: 1;
-            height: 100%;
-            background: var(--glass-blue);
-            border-left: 1px solid var(--glass-border);
-            border-right: 1px solid var(--glass-border);
-        }
+            display: none; flex: 1; height: 100%; background: var(--glass-blue); border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);
+        } /* 屏蔽门中间玻璃 */
 
         .psd-door-area {
-            flex: 0 0 128px;
-            height: 100%;
-            display: flex;
-            background: rgba(0, 0, 0, 0.1);
-        }
+            flex: 0 0 128px; height: 100%; display: flex; background: rgba(0, 0, 0, 0.1);
+        } /* 屏蔽门门区 */
 
         .psd-door {
-            flex: 1;
-            height: 100%;
-            background: linear-gradient(90deg, 
-                rgba(180, 200, 220, 0.45) 0%, 
-                rgba(200, 220, 240, 0.55) 50%, 
-                rgba(180, 200, 220, 0.45) 100%
-            );
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            position: relative;
-            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+            flex: 1; height: 100%;
+            background: linear-gradient(90deg, rgba(180, 200, 220, 0.45) 0%, rgba(200, 220, 240, 0.55) 50%, rgba(180, 200, 220, 0.45) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.35); position: relative; transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        } /* 屏蔽门门体 */
 
         .psd-door::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 30%;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.4);
-        }
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30%; height: 1px; background: rgba(255, 255, 255, 0.4);
+        } /* 屏蔽门中线 */
 
-        .psd-door.left.open {
-            transform: translateX(-90%);
-        }
+        .psd-door.left.open { transform: translateX(-90%); } /* 屏蔽门左门开门动画 */
 
-        .psd-door.right.open {
-            transform: translateX(90%);
-        }
+        .psd-door.right.open { transform: translateX(90%); } /* 屏蔽门右门开门动画 */
 
         /* 站台 */
         .platform {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 15%;
-            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
-            transform: translateZ(100px);
-        }
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 15%;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%); transform: translateZ(100px);
+        } /* 站台区域 */
 
-        .platform-floor {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(0deg, #2a2a2a 0%, #3a3a3a 100%);
-        }
+        .platform-floor { width: 100%; height: 100%; background: linear-gradient(0deg, #2a2a2a 0%, #3a3a3a 100%); } /* 站台地面 */
 
         .safety-line {
-            position: absolute;
-            top: 8px;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: repeating-linear-gradient(90deg, 
-                var(--safety-yellow) 0px, 
-                var(--safety-yellow) 15px, 
-                transparent 15px, 
-                transparent 22px
-            );
+            position: absolute; top: 8px; left: 0; width: 100%; height: 4px;
+            background: repeating-linear-gradient(90deg, var(--safety-yellow) 0px, var(--safety-yellow) 15px, transparent 15px, transparent 22px);
             box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
-        }
+        } /* 站台安全线 */
 
         /* 速度线 */
         .speed-lines {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 10;
-        }
+            position: absolute; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10;
+        } /* 速度线容器 */
 
-        .speed-lines.active {
-            opacity: 1;
-        }
+        .speed-lines.active { opacity: 1; } /* 激活速度线 */
 
         .speed-line {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: speedLine 0.3s linear infinite;
-        }
+            position: absolute; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: speedLine 0.3s linear infinite;
+        } /* 单条速度线 */
 
         @keyframes speedLine {
-            0% { transform: translateX(100vw); }
+            0% { transform: translateX(100vw); } /* 从右到左 */
             100% { transform: translateX(-100vw); }
         }
 
         /* 控制面板 */
         .controls {
-            position: fixed;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 15px;
-            background: rgba(0, 0, 0, 0.85);
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 200;
-            max-width: 98%;
-        }
+            position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+            padding: 10px 15px; background: rgba(0, 0, 0, 0.85); border-radius: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 200; max-width: 98%;
+        } /* 控制按钮区域 */
 
         .control-btn {
-            padding: 8px 14px;
-            font-size: 12px;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.25s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: white;
-        }
+            padding: 8px 14px; font-size: 12px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: all 0.25s;
+            text-transform: uppercase; letter-spacing: 0.5px; color: white;
+        } /* 控制按钮样式 */
 
-        .control-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-        }
+        .control-btn:hover:not(:disabled) { transform: translateY(-2px); } /* 按钮悬停效果 */
 
-        .control-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
+        .control-btn:disabled { opacity: 0.4; cursor: not-allowed; } /* 禁用按钮样式 */
 
-        .btn-arrive { background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%); }
+        .btn-arrive { background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%); } /* 进站按钮 */
         .btn-arrive:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(0, 153, 255, 0.4); }
 
-        .btn-open { background: linear-gradient(135deg, #00cc66 0%, #009944 100%); }
+        .btn-open { background: linear-gradient(135deg, #00cc66 0%, #009944 100%); } /* 开门按钮 */
         .btn-open:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(0, 204, 102, 0.4); }
 
-        .btn-close { background: linear-gradient(135deg, #ff6633 0%, #cc4422 100%); }
+        .btn-close { background: linear-gradient(135deg, #ff6633 0%, #cc4422 100%); } /* 关门按钮 */
         .btn-close:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(255, 102, 51, 0.4); }
 
-        .btn-depart { background: linear-gradient(135deg, #9966ff 0%, #6633cc 100%); }
+        .btn-depart { background: linear-gradient(135deg, #9966ff 0%, #6633cc 100%); } /* 离站按钮 */
         .btn-depart:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(153, 102, 255, 0.4); }
 
-        .btn-auto { background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%); color: #333; }
+        .btn-auto { background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%); color: #333; } /* 自动按钮 */
         .btn-auto:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(255, 204, 0, 0.4); }
         .btn-auto.active { animation: autoPulse 1.2s infinite; }
 
         .btn-direction {
-            background: linear-gradient(135deg, #666 0%, #444 100%);
-            border: 2px solid transparent;
+            background: linear-gradient(135deg, #666 0%, #444 100%); border: 2px solid transparent;
         }
         .btn-direction:hover:not(:disabled) {
             box-shadow: 0 3px 10px rgba(100, 100, 100, 0.4);
@@ -630,51 +423,51 @@
                 top: 175px;
             }
         }
-    </style>
+    </style> <!-- 样式结束 -->
 </head>
 <body>
-    <div class="main-title">地铁模拟器</div>
+    <div class="main-title">地铁模拟器</div> <!-- 顶部标题 -->
 
     <!-- 线路图区域 -->
-    <div class="route-display">
-        <div class="route-header">
-            <div class="route-direction left">← 市民中心方向</div>
-            <div class="route-center">
-                <span class="line-badge">9号线</span>
-                <span class="current-station">文化中心</span>
+    <div class="route-display"> <!-- 线路图主容器 -->
+        <div class="route-header"> <!-- 线路图头部 -->
+            <div class="route-direction left">← 市民中心方向</div> <!-- 左侧方向 -->
+            <div class="route-center"> <!-- 中间当前站点 -->
+                <span class="line-badge">9号线</span> <!-- 线路徽章 -->
+                <span class="current-station">文化中心</span> <!-- 当前站点名称 -->
             </div>
-            <div class="route-direction right">商业街方向 →</div>
+            <div class="route-direction right">商业街方向 →</div> <!-- 右侧方向 -->
         </div>
-        <div class="route-strip" id="routeStrip"></div>
+        <div class="route-strip" id="routeStrip"></div> <!-- 线路带状图 -->
     </div>
 
-    <div class="status-indicator" id="statusText">准备就绪</div>
+    <div class="status-indicator" id="statusText">准备就绪</div> <!-- 状态指示器 -->
 
-    <div class="game-container">
-        <div class="scene">
-            <div class="speed-lines" id="speedLines"></div>
+    <div class="game-container"> <!-- 游戏主容器 -->
+        <div class="scene"> <!-- 3D场景 -->
+            <div class="speed-lines" id="speedLines"></div> <!-- 速度线特效 -->
 
             <!-- 隧道 -->
-            <div class="tunnel">
-                <div class="tunnel-lights" id="tunnelLights"></div>
+            <div class="tunnel"> <!-- 隧道背景 -->
+                <div class="tunnel-lights" id="tunnelLights"></div> <!-- 隧道灯光 -->
             </div>
 
             <!-- 列车 -->
-            <div class="train dir-left" id="train">
-                <div class="train-body">
-                    <div class="train-side">
-                        <div class="train-stripe"></div>
-                        <div class="train-doors">
-                            <div class="train-door-unit">
-                                <div class="train-door-container">
-                                    <div class="train-door left" id="tDoor1L"></div>
-                                    <div class="train-door right" id="tDoor1R"></div>
+            <div class="train dir-left" id="train"> <!-- 列车主体 -->
+                <div class="train-body"> <!-- 列车车身 -->
+                    <div class="train-side"> <!-- 列车侧面 -->
+                        <div class="train-stripe"></div> <!-- 列车腰线 -->
+                        <div class="train-doors"> <!-- 列车门区域 -->
+                            <div class="train-door-unit"> <!-- 第一个门单元 -->
+                                <div class="train-door-container"> <!-- 门容器 -->
+                                    <div class="train-door left" id="tDoor1L"></div> <!-- 左门 -->
+                                    <div class="train-door right" id="tDoor1R"></div> <!-- 右门 -->
                                 </div>
                             </div>
-                            <div class="train-door-unit">
-                                <div class="train-door-container">
-                                    <div class="train-door left" id="tDoor2L"></div>
-                                    <div class="train-door right" id="tDoor2R"></div>
+                            <div class="train-door-unit"> <!-- 第二个门单元 -->
+                                <div class="train-door-container"> <!-- 门容器 -->
+                                    <div class="train-door left" id="tDoor2L"></div> <!-- 左门 -->
+                                    <div class="train-door right" id="tDoor2R"></div> <!-- 右门 -->
                                 </div>
                             </div>
                         </div>
@@ -683,375 +476,343 @@
             </div>
 
             <!-- 屏蔽门 -->
-            <div class="psd-system">
-                <div class="psd-whole">
-                    <div class="psd-side-glass"></div>
-                    <div class="psd-door-area">
-                        <div class="psd-door left" id="pDoor1L"></div>
-                        <div class="psd-door right" id="pDoor1R"></div>
+            <div class="psd-system"> <!-- 屏蔽门系统 -->
+                <div class="psd-whole"> <!-- 屏蔽门整体 -->
+                    <div class="psd-side-glass"></div> <!-- 左侧玻璃 -->
+                    <div class="psd-door-area psd-door-area-1"> <!-- 第一组门 -->
+                        <div class="psd-door left" id="pDoor1L"></div> <!-- 左门 -->
+                        <div class="psd-door right" id="pDoor1R"></div> <!-- 右门 -->
                     </div>
-                    <div class="psd-mid-glass"></div>
-                    <div class="psd-door-area">
-                        <div class="psd-door left" id="pDoor2L"></div>
-                        <div class="psd-door right" id="pDoor2R"></div>
+                    <div class="psd-mid-glass"></div> <!-- 中间玻璃 -->
+                    <div class="psd-door-area psd-door-area-2"> <!-- 第二组门 -->
+                        <div class="psd-door left" id="pDoor2L"></div> <!-- 左门 -->
+                        <div class="psd-door right" id="pDoor2R"></div> <!-- 右门 -->
                     </div>
-                    <div class="psd-side-glass"></div>
+                    <div class="psd-side-glass"></div> <!-- 右侧玻璃 -->
                 </div>
             </div>
 
             <!-- 站台 -->
-            <div class="platform">
-                <div class="platform-floor">
-                    <div class="safety-line"></div>
+            <div class="platform"> <!-- 站台区域 -->
+                <div class="platform-floor"> <!-- 站台地面 -->
+                    <div class="safety-line"></div> <!-- 安全线 -->
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="controls">
-        <button class="control-btn btn-direction active" id="btnLeft">向左行驶</button>
-        <button class="control-btn btn-direction" id="btnRight">向右行驶</button>
-        <button class="control-btn btn-arrive" id="btnArrive">进站</button>
-        <button class="control-btn btn-open" id="btnOpen" disabled>开门</button>
-        <button class="control-btn btn-close" id="btnClose" disabled>关门</button>
-        <button class="control-btn btn-depart" id="btnDepart" disabled>离站</button>
-        <button class="control-btn btn-auto" id="btnAuto">自动循环</button>
+    <div class="controls"> <!-- 控制按钮区域 -->
+        <button class="control-btn btn-direction active" id="btnLeft">向左行驶</button> <!-- 向左按钮 -->
+        <button class="control-btn btn-direction" id="btnRight">向右行驶</button> <!-- 向右按钮 -->
+        <button class="control-btn btn-arrive" id="btnArrive">进站</button> <!-- 进站按钮 -->
+        <button class="control-btn btn-open" id="btnOpen" disabled>开门</button> <!-- 开门按钮 -->
+        <button class="control-btn btn-close" id="btnClose" disabled>关门</button> <!-- 关门按钮 -->
+        <button class="control-btn btn-depart" id="btnDepart" disabled>离站</button> <!-- 离站按钮 -->
+        <button class="control-btn btn-auto" id="btnAuto">自动循环</button> <!-- 自动按钮 -->
     </div>
+
 
     <script>
         // ==================== 音频 ====================
-        const dingdong = new Audio('dingdong.mp3');
-        const announceLeft = new Audio('announce_left.mp3');
-        const announceRight = new Audio('announce_right.mp3');
-        const doorOpenSound = new Audio('door_open.mp3');
-        const doorCloseSound = new Audio('door_close.mp3');
+        const dingdong = new Audio('dingdong.mp3'); // 叮咚提示音
+        const announceLeft = new Audio('announce_left.mp3'); // 左方向报站音
+        const announceRight = new Audio('announce_right.mp3'); // 右方向报站音
+        const doorOpenSound = new Audio('door_open.mp3'); // 开门音效
+        const doorCloseSound = new Audio('door_close.mp3'); // 关门音效
 
-        function playDingdong() {
-            dingdong.currentTime = 0;
-            dingdong.play().catch(() => {});
+        function playDingdong() { // 播放叮咚音
+            dingdong.currentTime = 0; // 重置播放进度
+            dingdong.play().catch(() => {}); // 播放音频
         }
 
-        function playAnnounce(dir) {
-            const audio = dir === 'left' ? announceLeft : announceRight;
-            audio.currentTime = 0;
-            audio.play().catch(() => {});
+        function playAnnounce(dir) { // 播放报站音
+            const audio = dir === 'left' ? announceLeft : announceRight; // 根据方向选择音频
+            audio.currentTime = 0; // 重置播放进度
+            audio.play().catch(() => {}); // 播放音频
         }
 
-        function playDoorOpen() {
+        function playDoorOpen() { // 播放开门音
             doorOpenSound.currentTime = 0;
             doorOpenSound.play().catch(() => {});
         }
 
-        function playDoorClose() {
+        function playDoorClose() { // 播放关门音
             doorCloseSound.currentTime = 0;
             doorCloseSound.play().catch(() => {});
         }
 
         // ==================== 线路图 ====================
-        const stations = [
+        const stations = [ // 站点数组
             { name: '市民中心' },
             { name: '金融街' },
-            { name: '文化中心', current: true },
+            { name: '文化中心', current: true }, // 当前站点
             { name: '体育中心' },
             { name: '商业街' }
         ];
 
-        function initRouteLine() {
-            const container = document.getElementById('routeStrip');
-            container.innerHTML = '';
+        function initRouteLine() { // 初始化线路图
+            const container = document.getElementById('routeStrip'); // 获取容器
+            container.innerHTML = ''; // 清空内容
             
-            stations.forEach((station, index) => {
-                const stationEl = document.createElement('div');
-                stationEl.className = 'station';
-                if (station.current) stationEl.classList.add('current');
+            stations.forEach((station, index) => { // 遍历站点
+                const stationEl = document.createElement('div'); // 创建站点元素
+                stationEl.className = 'station'; // 添加类名
+                if (station.current) stationEl.classList.add('current'); // 当前站高亮
                 
-                const dot = document.createElement('div');
+                const dot = document.createElement('div'); // 创建圆点
                 dot.className = 'station-dot';
-                stationEl.appendChild(dot);
+                stationEl.appendChild(dot); // 添加到站点
                 
-                const name = document.createElement('div');
+                const name = document.createElement('div'); // 创建站名
                 name.className = 'station-name';
                 name.textContent = station.name;
-                stationEl.appendChild(name);
+                stationEl.appendChild(name); // 添加到站点
                 
-                container.appendChild(stationEl);
+                container.appendChild(stationEl); // 添加到容器
                 
-                if (index < stations.length - 1) {
-                    const line = document.createElement('div');
+                if (index < stations.length - 1) { // 不是最后一个站点
+                    const line = document.createElement('div'); // 创建连线
                     line.className = 'station-line';
-                    container.appendChild(line);
+                    container.appendChild(line); // 添加连线
                 }
             });
         }
 
+
         // ==================== 游戏状态 ====================
-        let state = 'ready';
-        let direction = 'left';
-        let autoMode = false;
-        let autoTimer = null;
+        let state = 'ready'; // 游戏状态
+        let direction = 'left'; // 当前方向
+        let autoMode = false; // 是否自动模式
+        let autoTimer = null; // 自动模式定时器
 
-        const train = document.getElementById('train');
-        const statusText = document.getElementById('statusText');
-        const speedLines = document.getElementById('speedLines');
+        const train = document.getElementById('train'); // 列车元素
+        const statusText = document.getElementById('statusText'); // 状态文本
+        const speedLines = document.getElementById('speedLines'); // 速度线容器
 
-        const psdDoors = [
+        const psdDoors = [ // 屏蔽门元素数组
             document.getElementById('pDoor1L'),
             document.getElementById('pDoor1R'),
             document.getElementById('pDoor2L'),
             document.getElementById('pDoor2R')
         ];
 
-        const trainDoors = [
+        const trainDoors = [ // 列车门元素数组
             document.getElementById('tDoor1L'),
             document.getElementById('tDoor1R'),
             document.getElementById('tDoor2L'),
             document.getElementById('tDoor2R')
         ];
 
-        const btnLeft = document.getElementById('btnLeft');
-        const btnRight = document.getElementById('btnRight');
-        const btnArrive = document.getElementById('btnArrive');
-        const btnOpen = document.getElementById('btnOpen');
-        const btnClose = document.getElementById('btnClose');
-        const btnDepart = document.getElementById('btnDepart');
-        const btnAuto = document.getElementById('btnAuto');
+        const btnLeft = document.getElementById('btnLeft'); // 向左按钮
+        const btnRight = document.getElementById('btnRight'); // 向右按钮
+        const btnArrive = document.getElementById('btnArrive'); // 进站按钮
+        const btnOpen = document.getElementById('btnOpen'); // 开门按钮
+        const btnClose = document.getElementById('btnClose'); // 关门按钮
+        const btnDepart = document.getElementById('btnDepart'); // 离站按钮
+        const btnAuto = document.getElementById('btnAuto'); // 自动按钮
 
-        function setStatus(text, type) {
-            statusText.textContent = text;
-            statusText.className = 'status-indicator' + (type ? ' ' + type : '');
+        function setStatus(text, type) { // 设置状态文本
+            statusText.textContent = text; // 设置内容
+            statusText.className = 'status-indicator' + (type ? ' ' + type : ''); // 设置样式
         }
 
-        function updateButtons() {
-            btnArrive.disabled = state !== 'ready' && state !== 'departed';
-            btnOpen.disabled = state !== 'arrived';
-            btnClose.disabled = state !== 'open';
-            btnDepart.disabled = state !== 'arrived' && state !== 'closing';
-            btnLeft.disabled = state !== 'ready' && state !== 'departed';
-            btnRight.disabled = state !== 'ready' && state !== 'departed';
+        function updateButtons() { // 更新按钮状态
+            btnArrive.disabled = state !== 'ready' && state !== 'departed'; // 进站按钮
+            btnOpen.disabled = state !== 'arrived'; // 开门按钮
+            btnClose.disabled = state !== 'open'; // 关门按钮
+            btnDepart.disabled = state !== 'arrived' && state !== 'closing'; // 离站按钮
+            btnLeft.disabled = state !== 'ready' && state !== 'departed'; // 向左按钮
+            btnRight.disabled = state !== 'ready' && state !== 'departed'; // 向右按钮
         }
 
-        function createSpeedLines() {
+        function createSpeedLines() { // 创建速度线
             speedLines.innerHTML = '';
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 8; i++) { // 生成8条速度线
                 const line = document.createElement('div');
                 line.className = 'speed-line';
-                line.style.top = (20 + Math.random() * 60) + '%';
-                line.style.width = (40 + Math.random() * 80) + 'px';
-                line.style.animationDelay = Math.random() * 0.15 + 's';
-                line.style.animationDuration = (0.2 + Math.random() * 0.1) + 's';
+                line.style.top = (20 + Math.random() * 60) + '%'; // 随机垂直位置
+                line.style.width = (40 + Math.random() * 80) + 'px'; // 随机宽度
+                line.style.animationDelay = Math.random() * 0.15 + 's'; // 随机延迟
+                line.style.animationDuration = (0.2 + Math.random() * 0.1) + 's'; // 随机动画时长
                 speedLines.appendChild(line);
             }
         }
 
-        function createTunnelLights() {
+        function createTunnelLights() { // 创建隧道灯光
             const container = document.getElementById('tunnelLights');
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 8; i++) { // 生成8个灯光
                 const light = document.createElement('div');
                 light.className = 'tunnel-light';
-                light.style.left = (15 + i * 10) + '%';
-                light.style.top = (25 + Math.random() * 15) + '%';
+                light.style.left = (15 + i * 10) + '%'; // 横向分布
+                light.style.top = (25 + Math.random() * 15) + '%'; // 随机纵向位置
                 container.appendChild(light);
             }
         }
 
+
         // ==================== 方向切换 ====================
-        function setDirection(dir) {
-            if (state !== 'ready' && state !== 'departed') return;
+        function setDirection(dir) { // 设置行驶方向
+            if (state !== 'ready' && state !== 'departed') return; // 仅在准备或离站后可切换
             
-            direction = dir;
+            direction = dir; // 设置方向
             
             // 重置列车位置和类
-            train.classList.remove('dir-left', 'dir-right', 'arrived', 'departed');
-            void train.offsetWidth;
+            train.classList.remove('dir-left', 'dir-right', 'arrived', 'departed'); // 移除所有方向和状态类
+            void train.offsetWidth; // 强制重绘
             
-            if (dir === 'left') {
-                btnLeft.classList.add('active');
+            if (dir === 'left') { // 向左
+                btnLeft.classList.add('active'); // 激活左按钮
                 btnRight.classList.remove('active');
-                train.classList.add('dir-left');
-            } else {
-                btnRight.classList.add('active');
+                train.classList.add('dir-left'); // 添加左行驶类
+            } else { // 向右
+                btnRight.classList.add('active'); // 激活右按钮
                 btnLeft.classList.remove('active');
-                train.classList.add('dir-right');
+                train.classList.add('dir-right'); // 添加右行驶类
             }
         }
 
+
         // ==================== 核心功能 ====================
-        function doArrive() {
-            if (state !== 'ready' && state !== 'departed') return;
+        function doArrive() { // 进站
+            if (state !== 'ready' && state !== 'departed') return; // 仅在准备或离站后可进站
             
-            state = 'arriving';
-            setStatus('列车进站中...', 'arriving');
-            updateButtons();
+            state = 'arriving'; // 状态切换为进站中
+            setStatus('列车进站中...', 'arriving'); // 显示状态
+            updateButtons(); // 更新按钮
             
-            playDingdong();
-            setTimeout(() => playAnnounce(direction), 800);
+            playDingdong(); // 播放叮咚
+            setTimeout(() => playAnnounce(direction), 800); // 延迟播放报站音
             
-            createSpeedLines();
-            speedLines.classList.add('active');
+            createSpeedLines(); // 创建速度线
+            speedLines.classList.add('active'); // 显示速度线
             
             // 确保列车在正确的起始位置，然后动画到中心
-            train.classList.remove('arrived', 'departed');
-            void train.offsetWidth;
+            train.classList.remove('arrived', 'departed'); // 移除到站/离站类
+            void train.offsetWidth; // 强制重绘
             
             setTimeout(() => {
-                train.classList.add('arrived');
+                train.classList.add('arrived'); // 添加到站类，触发动画
             }, 50);
             
             setTimeout(() => {
-                speedLines.classList.remove('active');
-                state = 'arrived';
-                setStatus('列车已到达', 'boarding');
-                updateButtons();
-                if (autoMode) autoTimer = setTimeout(doOpen, 1500);
+                speedLines.classList.remove('active'); // 隐藏速度线
+                state = 'arrived'; // 状态切换为到站
+                setStatus('列车已到达', 'boarding'); // 显示状态
+                updateButtons(); // 更新按钮
+                if (autoMode) autoTimer = setTimeout(doOpen, 1500); // 自动模式下延迟开门
             }, 3000);
         }
 
-        function doOpen() {
-            if (state !== 'arrived') return;
+        function doOpen() { // 开门
+            if (state !== 'arrived') return; // 仅到站后可开门
             
-            state = 'open';
-            setStatus('开门中...', 'boarding');
-            updateButtons();
+            state = 'open'; // 状态切换为开门
+            setStatus('开门中...', 'boarding'); // 显示状态
+            updateButtons(); // 更新按钮
             
-            playDoorOpen();
+            playDoorOpen(); // 播放开门音
             
-            psdDoors.forEach(door => { if (door) door.classList.add('open'); });
-            trainDoors.forEach(door => { if (door) door.classList.add('open'); });
+            psdDoors.forEach(door => { if (door) door.classList.add('open'); }); // 屏蔽门开门
+            trainDoors.forEach(door => { if (door) door.classList.add('open'); }); // 列车门开门
             
             setTimeout(() => {
-                setStatus('上下客中...', 'boarding');
-                if (autoMode) autoTimer = setTimeout(doClose, 4000);
+                setStatus('上下客中...', 'boarding'); // 显示上下客
+                if (autoMode) autoTimer = setTimeout(doClose, 4000); // 自动模式下延迟关门
             }, 1000);
         }
 
-        function doClose() {
-            if (state !== 'open') return;
+        function doClose() { // 关门
+            if (state !== 'open') return; // 仅开门后可关门
             
-            state = 'closing';
-            setStatus('关门中...', 'departing');
-            updateButtons();
+            state = 'closing'; // 状态切换为关门中
+            setStatus('关门中...', 'departing'); // 显示状态
+            updateButtons(); // 更新按钮
             
-            playDoorClose();
+            playDoorClose(); // 播放关门音
             
-            psdDoors.forEach(door => { if (door) door.classList.remove('open'); });
-            trainDoors.forEach(door => { if (door) door.classList.remove('open'); });
+            psdDoors.forEach(door => { if (door) door.classList.remove('open'); }); // 屏蔽门关门
+            trainDoors.forEach(door => { if (door) door.classList.remove('open'); }); // 列车门关门
             
             setTimeout(() => {
-                state = 'arrived';
-                setStatus('车门已关闭', 'departing');
-                updateButtons();
-                if (autoMode) autoTimer = setTimeout(doDepart, 1200);
+                state = 'arrived'; // 状态切换为到站
+                setStatus('车门已关闭', 'departing'); // 显示状态
+                updateButtons(); // 更新按钮
+                if (autoMode) autoTimer = setTimeout(doDepart, 1200); // 自动模式下延迟离站
             }, 1000);
         }
 
-        function doDepart() {
-            if (state !== 'arrived' && state !== 'closing') return;
+        function doDepart() { // 离站
+            if (state !== 'arrived' && state !== 'closing') return; // 仅到站或关门后可离站
             
-            state = 'departing';
-            setStatus('列车离站...', 'departing');
-            updateButtons();
+            state = 'departing'; // 状态切换为离站
+            setStatus('列车离站...', 'departing'); // 显示状态
+            updateButtons(); // 更新按钮
             
-            createSpeedLines();
-            speedLines.classList.add('active');
+            createSpeedLines(); // 创建速度线
+            speedLines.classList.add('active'); // 显示速度线
             
             // 从当前停靠位置开始驶出
-            train.classList.remove('arrived');
-            train.classList.add('departed');
+            train.classList.remove('arrived'); // 移除到站类
+            train.classList.add('departed'); // 添加离站类
             
             setTimeout(() => {
-                speedLines.classList.remove('active');
-                state = 'departed';
-                setStatus('列车已离站');
-                updateButtons();
+                speedLines.classList.remove('active'); // 隐藏速度线
+                state = 'departed'; // 状态切换为离站完成
+                setStatus('列车已离站'); // 显示状态
+                updateButtons(); // 更新按钮
                 
                 // 重置列车到另一侧屏幕外，准备下次进站
                 setTimeout(() => {
-                    train.classList.remove('departed');
-                    void train.offsetWidth;
+                    train.classList.remove('departed'); // 移除离站类
+                    void train.offsetWidth; // 强制重绘
                 }, 100);
                 
-                if (autoMode) autoTimer = setTimeout(doArrive, 2500);
+                if (autoMode) autoTimer = setTimeout(doArrive, 2500); // 自动模式下延迟进站
             }, 3000);
         }
 
-        function toggleAuto() {
-            autoMode = !autoMode;
+        function toggleAuto() { // 切换自动模式
+            autoMode = !autoMode; // 取反
             
-            if (autoMode) {
-                btnAuto.classList.add('active');
-                btnAuto.textContent = '停止循环';
+            if (autoMode) { // 开启自动
+                btnAuto.classList.add('active'); // 激活按钮
+                btnAuto.textContent = '停止循环'; // 按钮文字
                 
                 if (state === 'ready' || state === 'departed') {
-                    doArrive();
+                    doArrive(); // 进站
                 } else if (state === 'arrived') {
-                    doOpen();
+                    doOpen(); // 开门
                 } else if (state === 'open') {
-                    doClose();
+                    doClose(); // 关门
                 }
-            } else {
-                btnAuto.classList.remove('active');
-                btnAuto.textContent = '自动循环';
+            } else { // 关闭自动
+                btnAuto.classList.remove('active'); // 取消激活
+                btnAuto.textContent = '自动循环'; // 按钮文字
                 if (autoTimer) {
-                    clearTimeout(autoTimer);
+                    clearTimeout(autoTimer); // 清除定时器
                     autoTimer = null;
                 }
             }
         }
 
         // ==================== 事件绑定 ====================
-        btnLeft.addEventListener('click', () => setDirection('left'));
-        btnRight.addEventListener('click', () => setDirection('right'));
-        btnArrive.addEventListener('click', doArrive);
-        btnOpen.addEventListener('click', doOpen);
-        btnClose.addEventListener('click', doClose);
-        btnDepart.addEventListener('click', doDepart);
-        btnAuto.addEventListener('click', toggleAuto);
+        btnLeft.addEventListener('click', () => setDirection('left')); // 左按钮点击
+        btnRight.addEventListener('click', () => setDirection('right')); // 右按钮点击
+        btnArrive.addEventListener('click', doArrive); // 进站按钮点击
+        btnOpen.addEventListener('click', doOpen); // 开门按钮点击
+        btnClose.addEventListener('click', doClose); // 关门按钮点击
+        btnDepart.addEventListener('click', doDepart); // 离站按钮点击
+        btnAuto.addEventListener('click', toggleAuto); // 自动按钮点击
 
         // ==================== 初始化 ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            createTunnelLights();
-            initRouteLine();
-            updateButtons();
-            setDirection('left');
+        document.addEventListener('DOMContentLoaded', () => { // 页面加载完成
+            createTunnelLights(); // 创建隧道灯光
+            initRouteLine(); // 初始化线路图
+            updateButtons(); // 更新按钮
+            setDirection('left'); // 默认向左行驶
         });
 
-        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-    </script>
-</body>
-</html>
-            doOpen();
-                } else if (state === 'open') {
-                    doClose();
-                }
-            } else {
-                btnAuto.classList.remove('active');
-                btnAuto.textContent = '自动循环';
-                if (autoTimer) {
-                    clearTimeout(autoTimer);
-                    autoTimer = null;
-                }
-            }
-        }
-
-        // ==================== 事件绑定 ====================
-        btnLeft.addEventListener('click', () => setDirection('left'));
-        btnRight.addEventListener('click', () => setDirection('right'));
-        btnArrive.addEventListener('click', doArrive);
-        btnOpen.addEventListener('click', doOpen);
-        btnClose.addEventListener('click', doClose);
-        btnDepart.addEventListener('click', doDepart);
-        btnAuto.addEventListener('click', toggleAuto);
-
-        // ==================== 初始化 ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            createTunnelLights();
-            initRouteLine();
-            updateButtons();
-            // 默认向左行驶
-            setDirection('left');
-        });
-
-        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false }); // 禁止页面滑动
     </script>
 </body>
 </html>
