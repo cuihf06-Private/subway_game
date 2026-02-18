@@ -197,7 +197,7 @@
 
         /* 竖屏列车 */
         @media (orientation: portrait) {
-            .train { width: 205px; } /* 竖屏宽度 */
+            .train { width: 410px; } /* 竖屏宽度，原来205px，现为两倍 */
         }
 
         /* 横屏列车 */
@@ -284,10 +284,11 @@
 
         /* 竖屏屏蔽门 */
         @media (orientation: portrait) {
-            .psd-system { width: 205px; } /* 竖屏宽度 */
+            .psd-system { width: 410px; } /* 竖屏宽度，原来205px，现为两倍 */
             .psd-mid-glass,
             .psd-door-area-2 { display: none !important; } /* 隐藏第二组门 */
             .psd-door-area-1 { margin: 0 auto; } /* 居中显示 */
+            .psd-side-glass, .psd-mid-glass { flex: 2; } /* 竖屏下玻璃宽度变为两倍 */
         }
 
         /* 横屏屏蔽门 */
