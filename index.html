@@ -770,14 +770,21 @@
                 state = 'departed'; // 状态切换为离站完成
                 setStatus('列车已离站'); // 显示状态
                 updateButtons(); // 更新按钮
-                
-                // 重置列车到另一侧屏幕外，准备下次进站
-                setTimeout(() => {
-                    train.classList.remove('departed'); // 移除离站类
-                    train.style.transform = '';
-                    void train.offsetWidth; // 强制重绘
-                }, 100);
-                
+
+                // 立即闪现到另一侧屏幕外，避免视觉穿越
+                train.classList.remove('departed'); // 移除离站类
+                train.style.transition = 'none'; // 关闭过渡动画
+                void train.offsetWidth; // 强制重绘
+                if (direction === 'left') {
+                    train.classList.remove('dir-left', 'dir-right');
+                    train.classList.add('dir-left');
+                } else {
+                    train.classList.remove('dir-left', 'dir-right');
+                    train.classList.add('dir-right');
+                }
+                void train.offsetWidth; // 再次强制重绘
+                train.style.transition = '';
+
                 if (autoMode) autoTimer = setTimeout(doArrive, 2500); // 自动模式下延迟进站
             }, 3000);
         }
