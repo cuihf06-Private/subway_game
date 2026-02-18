@@ -87,10 +87,11 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.sha) }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || format('Build {0}', github.sha) }}
           files: subway-simulator-*.apk
           draft: false
-          prerelease: false
+          prerelease: ${{ github.ref_type != 'tag' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

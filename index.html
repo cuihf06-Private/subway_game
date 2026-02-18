@@ -525,11 +525,11 @@
 
     <script>
         // ==================== 音频 ====================
-        const dingdong = new Audio('dingdong.mp3'); // 叮咚提示音
-        const announceLeft = new Audio('announce_left.mp3'); // 左方向报站音
-        const announceRight = new Audio('announce_right.mp3'); // 右方向报站音
-        const doorOpenSound = new Audio('door_open.mp3'); // 开门音效
-        const doorCloseSound = new Audio('door_close.mp3'); // 关门音效
+        const dingdong = new Audio('./dingdong.mp3'); // 叮咚提示音
+        const announceLeft = new Audio('./announce_left.mp3'); // 左方向报站音
+        const announceRight = new Audio('./announce_right.mp3'); // 右方向报站音
+        const doorOpenSound = new Audio('./door_open.mp3'); // 开门音效
+        const doorCloseSound = new Audio('./door_close.mp3'); // 关门音效
 
         function playDingdong() { // 播放叮咚音
             dingdong.currentTime = 0; // 重置播放进度

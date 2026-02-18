@@ -23,7 +23,7 @@
 
 ### 自动构建
 
-每次推送到 `main` 分支都会自动触发构建：
+每次推送到 `main` 分支都会自动触发构建并创建 Release：
 
 ```bash
 git add .
@@ -31,18 +31,18 @@ git commit -m "你的提交信息"
 git push origin main
 ```
 
-构建完成后，在 GitHub Actions 页面下载 APK。
+构建完成后，会自动创建一个 prerelease，可以在 Releases 页面下载 APK。
 
 ### 创建正式版本
 
-推送 tag 会自动创建 GitHub Release：
+推送 tag 会创建正式版本的 Release：
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-APK 会自动发布到 GitHub Releases 页面。
+APK 会作为正式版本发布到 GitHub Releases 页面。
 
 ### 手动触发
 
