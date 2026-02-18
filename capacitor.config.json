@@ -1,8 +1,7 @@
 {
   "appId": "com.subway.simulator",
   "appName": "地铁模拟器",
-  "webDir": ".",
-  "bundledWebRuntime": false,
+  "webDir": "www",
   "android": {
     "buildOptions": {
       "keystorePath": "release.keystore",

@@ -15,6 +15,10 @@
 
 直接打开 `index.html` 文件即可在浏览器中体验。
 
+## 项目说明
+
+项目使用 Capacitor 将网页游戏打包成 Android APK。所有网页资源（HTML、音频文件）会在构建时自动复制到 `www` 目录，该目录已添加到 `.gitignore` 中。
+
 ## 打包成 Android APK
 
 ### 前置要求

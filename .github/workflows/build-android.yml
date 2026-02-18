@@ -25,6 +25,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Prepare web files
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp *.mp3 www/
+
       - name: Install dependencies
         run: |
           npm install
