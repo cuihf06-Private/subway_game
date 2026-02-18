@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>地铁模拟器 - Subway Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --platform-gray: #3a3a3a;
+            --safety-yellow: #ffc107;
+            --glass-blue: rgba(135, 206, 235, 0.22);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --line-color: #009944;
+            --train-silver: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 30%, #a0a0a0 60%, #d0d0d0 100%);
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: #0a0a15;
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 顶部标题 */
+        .main-title {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(135, 206, 235, 0.6);
+            z-index: 500;
+            letter-spacing: 3px;
+        }
+
+        /* 线路图区域 */
+        .route-display {
+            position: fixed;
+            top: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 550px;
+            background: linear-gradient(180deg, #0f1a2e 0%, #1a2a4a 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            z-index: 400;
+            overflow: hidden;
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 2px solid var(--line-color);
+        }
+
+        .route-direction {
+            font-size: 11px;
+            color: #aaa;
+            flex: 1;
+        }
+
+        .route-direction.left { text-align: left; }
+        .route-direction.right { text-align: right; }
+
+        .route-center {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .line-badge {
+            background: var(--line-color);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .current-station {
+            color: #ffc107;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* 带状线路图 */
+        .route-strip {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 0;
+        }
+
+        .station {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .station-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #555;
+            border: 2px solid #777;
+            position: relative;
+            z-index: 2;
+        }
+
+        .station.current .station-dot {
+            background: var(--line-color);
+            border-color: #00ff66;
+            box-shadow: 0 0 10px var(--line-color);
+            animation: pulseDot 1.5s infinite;
+        }
+
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.25); }
+        }
+
+        .station-name {
+            color: #888;
+            font-size: 11px;
+            margin-top: 4px;
+            white-space: nowrap;
+        }
+
+        .station.current .station-name {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .station-line {
+            width: 55px;
+            height: 3px;
+            background: #555;
+            margin-top: -16px;
+        }
+
+        /* 状态指示器 */
+        .status-indicator {
+            position: fixed;
+            top: 155px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 16px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 300;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .status-indicator.arriving { border-color: #0099ff; color: #66ccff; }
+        .status-indicator.boarding { border-color: #00ff66; color: #66ff99; }
+        .status-indicator.departing { border-color: #ff6600; color: #ffaa66; }
+
+        /* 游戏容器 - 紧贴在线路图下方 */
+        .game-container {
+            position: fixed;
+            top: 185px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 900px;
+            height: calc(100vh - 280px);
+            perspective: 1500px;
+            perspective-origin: 50% 50%;
+            overflow: hidden;
+        }
+
+        /* 3D场景 */
+        .scene {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        /* 隧道背景 - 与屏蔽门区域完全一致 */
+        .tunnel {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%) translateZ(-400px);
+            background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%);
+            overflow: hidden;
+        }
+
+        /* 竖屏隧道 */
+        @media (orientation: portrait) {
+            .tunnel {
+                width: 205px;
+                height: 55%;
+            }
+        }
+
+        /* 横屏隧道 */
+        @media (orientation: landscape) {
+            .tunnel {
+                width: 570px;
+                height: 55%;
+            }
+        }
+
+        .tunnel-lights {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .tunnel-light {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #fff, 0 0 20px rgba(135, 206, 235, 0.4);
+        }
+
+        /* 列车 */
+        .train {
+            position: absolute;
+            bottom: 15%;
+            height: 55%;
+            transform: translateZ(-200px);
+            transform-style: preserve-3d;
+        }
+
+        /* 竖屏列车 */
+        @media (orientation: portrait) {
+            .train {
+                width: 205px;
+            }
+        }
+
+        /* 横屏列车 */
+        @media (orientation: landscape) {
+            .train {
+                width: 570px;
+            }
+        }
+
+        /* 向左行驶 */
+        .train.dir-left {
+            left: calc(50% + 60vw);
+            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .train.dir-left.arrived {
+            left: 50%;
+            transform: translateZ(-200px) translateX(-50%);
+        }
+
+        .train.dir-left.departed {
+            left: calc(50% - 60vw);
+        }
+
+        /* 向右行驶 */
+        .train.dir-right {
+            left: calc(50% - 60vw);
+            transition: left 3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .train.dir-right.arrived {
+            left: 50%;
+            transform: translateZ(-200px) translateX(-50%);
+        }
+
+        .train.dir-right.departed {
+            left: calc(50% + 60vw);
+        }
+
+        .train-body {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .train-side {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--train-silver);
+            border-radius: 8px 8px 0 0;
+            box-shadow: 
+                inset 0 2px 10px rgba(255,255,255,0.4),
+                inset 0 -2px 10px rgba(0,0,0,0.3),
+                0 5px 15px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .train-stripe {
+            position: absolute;
+            top: 45%;
+            left: 0;
+            width: 100%;
+            height: 4%;
+            background: linear-gradient(90deg, var(--line-color) 0%, #00cc66 50%, var(--line-color) 100%);
+        }
+
+        .train-doors {
+            position: absolute;
+            width: 100%;
+            height: 90%;
+            top: 5%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 竖屏 - 一个门，宽度128px */
+        @media (orientation: portrait) {
+            .train-door-unit:nth-child(2) {
+                display: none;
+            }
+            .train-doors {
+                gap: 0;
+            }
+        }
+
+        /* 横屏 - 两个门，每个128px，间距200px */
+        @media (orientation: landscape) {
+            .train-doors {
+                gap: 200px;
+            }
+        }
+
+        .train-door-unit {
+            width: 128px;
+            height: 90%;
+            position: relative;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 2px;
+        }
+
+        .train-door-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+        }
+
+        .train-door {
+            flex: 1;
+            height: 100%;
+            background: linear-gradient(90deg, #1a1a2e 0%, #2a2a3e 50%, #1a1a2e 100%);
+            border: 1px solid #333;
+            position: relative;
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .train-door.left.open {
+            transform: translateX(-90%);
+        }
+
+        .train-door.right.open {
+            transform: translateX(90%);
+        }
+
+        /* 屏蔽门系统 */
+        .psd-system {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%) translateZ(50px);
+            height: 55%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        /* 竖屏屏蔽门 */
+        @media (orientation: portrait) {
+            .psd-system {
+                width: 205px;
+            }
+            .psd-mid-glass,
+            .psd-door-area:nth-child(3) {
+                display: none !important;
+            }
+        }
+
+        /* 横屏屏蔽门 */
+        @media (orientation: landscape) {
+            .psd-system {
+                width: 570px;
+            }
+            .psd-mid-glass,
+            .psd-door-area:nth-child(3) {
+                display: flex !important;
+            }
+        }
+
+        .psd-whole {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            background: rgba(200, 220, 240, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 2px;
+        }
+
+        .psd-side-glass {
+            flex: 1;
+            height: 100%;
+            background: var(--glass-blue);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .psd-mid-glass {
+            display: none;
+            flex: 1;
+            height: 100%;
+            background: var(--glass-blue);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .psd-door-area {
+            flex: 0 0 128px;
+            height: 100%;
+            display: flex;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .psd-door {
+            flex: 1;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                rgba(180, 200, 220, 0.45) 0%, 
+                rgba(200, 220, 240, 0.55) 50%, 
+                rgba(180, 200, 220, 0.45) 100%
+            );
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            position: relative;
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .psd-door::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .psd-door.left.open {
+            transform: translateX(-90%);
+        }
+
+        .psd-door.right.open {
+            transform: translateX(90%);
+        }
+
+        /* 站台 */
+        .platform {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 15%;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+            transform: translateZ(100px);
+        }
+
+        .platform-floor {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(0deg, #2a2a2a 0%, #3a3a3a 100%);
+        }
+
+        .safety-line {
+            position: absolute;
+            top: 8px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: repeating-linear-gradient(90deg, 
+                var(--safety-yellow) 0px, 
+                var(--safety-yellow) 15px, 
+                transparent 15px, 
+                transparent 22px
+            );
+            box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
+        }
+
+        /* 速度线 */
+        .speed-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        .speed-lines.active {
+            opacity: 1;
+        }
+
+        .speed-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: speedLine 0.3s linear infinite;
+        }
+
+        @keyframes speedLine {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100vw); }
+        }
+
+        /* 控制面板 */
+        .controls {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 200;
+            max-width: 98%;
+        }
+
+        .control-btn {
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-arrive { background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%); }
+        .btn-arrive:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(0, 153, 255, 0.4); }
+
+        .btn-open { background: linear-gradient(135deg, #00cc66 0%, #009944 100%); }
+        .btn-open:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(0, 204, 102, 0.4); }
+
+        .btn-close { background: linear-gradient(135deg, #ff6633 0%, #cc4422 100%); }
+        .btn-close:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(255, 102, 51, 0.4); }
+
+        .btn-depart { background: linear-gradient(135deg, #9966ff 0%, #6633cc 100%); }
+        .btn-depart:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(153, 102, 255, 0.4); }
+
+        .btn-auto { background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%); color: #333; }
+        .btn-auto:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(255, 204, 0, 0.4); }
+        .btn-auto.active { animation: autoPulse 1.2s infinite; }
+
+        .btn-direction {
+            background: linear-gradient(135deg, #666 0%, #444 100%);
+            border: 2px solid transparent;
+        }
+        .btn-direction:hover:not(:disabled) {
+            box-shadow: 0 3px 10px rgba(100, 100, 100, 0.4);
+        }
+        .btn-direction.active {
+            border-color: #00ccff;
+            background: linear-gradient(135deg, #0088cc 0%, #0066aa 100%);
+        }
+
+        @keyframes autoPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.5); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 204, 0, 0); }
+        }
+
+        /* 小屏幕适配 */
+        @media (max-height: 600px) {
+            .game-container {
+                height: calc(100vh - 260px);
+            }
+            .main-title {
+                font-size: 16px;
+            }
+            .route-display {
+                top: 40px;
+            }
+            .status-indicator {
+                top: 145px;
+            }
+            .game-container {
+                top: 175px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-title">地铁模拟器</div>
+
+    <!-- 线路图区域 -->
+    <div class="route-display">
+        <div class="route-header">
+            <div class="route-direction left">← 市民中心方向</div>
+            <div class="route-center">
+                <span class="line-badge">9号线</span>
+                <span class="current-station">文化中心</span>
+            </div>
+            <div class="route-direction right">商业街方向 →</div>
+        </div>
+        <div class="route-strip" id="routeStrip"></div>
+    </div>
+
+    <div class="status-indicator" id="statusText">准备就绪</div>
+
+    <div class="game-container">
+        <div class="scene">
+            <div class="speed-lines" id="speedLines"></div>
+
+            <!-- 隧道 -->
+            <div class="tunnel">
+                <div class="tunnel-lights" id="tunnelLights"></div>
+            </div>
+
+            <!-- 列车 -->
+            <div class="train dir-left" id="train">
+                <div class="train-body">
+                    <div class="train-side">
+                        <div class="train-stripe"></div>
+                        <div class="train-doors">
+                            <div class="train-door-unit">
+                                <div class="train-door-container">
+                                    <div class="train-door left" id="tDoor1L"></div>
+                                    <div class="train-door right" id="tDoor1R"></div>
+                                </div>
+                            </div>
+                            <div class="train-door-unit">
+                                <div class="train-door-container">
+                                    <div class="train-door left" id="tDoor2L"></div>
+                                    <div class="train-door right" id="tDoor2R"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 屏蔽门 -->
+            <div class="psd-system">
+                <div class="psd-whole">
+                    <div class="psd-side-glass"></div>
+                    <div class="psd-door-area">
+                        <div class="psd-door left" id="pDoor1L"></div>
+                        <div class="psd-door right" id="pDoor1R"></div>
+                    </div>
+                    <div class="psd-mid-glass"></div>
+                    <div class="psd-door-area">
+                        <div class="psd-door left" id="pDoor2L"></div>
+                        <div class="psd-door right" id="pDoor2R"></div>
+                    </div>
+                    <div class="psd-side-glass"></div>
+                </div>
+            </div>
+
+            <!-- 站台 -->
+            <div class="platform">
+                <div class="platform-floor">
+                    <div class="safety-line"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn btn-direction active" id="btnLeft">向左行驶</button>
+        <button class="control-btn btn-direction" id="btnRight">向右行驶</button>
+        <button class="control-btn btn-arrive" id="btnArrive">进站</button>
+        <button class="control-btn btn-open" id="btnOpen" disabled>开门</button>
+        <button class="control-btn btn-close" id="btnClose" disabled>关门</button>
+        <button class="control-btn btn-depart" id="btnDepart" disabled>离站</button>
+        <button class="control-btn btn-auto" id="btnAuto">自动循环</button>
+    </div>
+
+    <script>
+        // ==================== 音频 ====================
+        const dingdong = new Audio('dingdong.mp3');
+        const announceLeft = new Audio('announce_left.mp3');
+        const announceRight = new Audio('announce_right.mp3');
+        const doorOpenSound = new Audio('door_open.mp3');
+        const doorCloseSound = new Audio('door_close.mp3');
+
+        function playDingdong() {
+            dingdong.currentTime = 0;
+            dingdong.play().catch(() => {});
+        }
+
+        function playAnnounce(dir) {
+            const audio = dir === 'left' ? announceLeft : announceRight;
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+        }
+
+        function playDoorOpen() {
+            doorOpenSound.currentTime = 0;
+            doorOpenSound.play().catch(() => {});
+        }
+
+        function playDoorClose() {
+            doorCloseSound.currentTime = 0;
+            doorCloseSound.play().catch(() => {});
+        }
+
+        // ==================== 线路图 ====================
+        const stations = [
+            { name: '市民中心' },
+            { name: '金融街' },
+            { name: '文化中心', current: true },
+            { name: '体育中心' },
+            { name: '商业街' }
+        ];
+
+        function initRouteLine() {
+            const container = document.getElementById('routeStrip');
+            container.innerHTML = '';
+            
+            stations.forEach((station, index) => {
+                const stationEl = document.createElement('div');
+                stationEl.className = 'station';
+                if (station.current) stationEl.classList.add('current');
+                
+                const dot = document.createElement('div');
+                dot.className = 'station-dot';
+                stationEl.appendChild(dot);
+                
+                const name = document.createElement('div');
+                name.className = 'station-name';
+                name.textContent = station.name;
+                stationEl.appendChild(name);
+                
+                container.appendChild(stationEl);
+                
+                if (index < stations.length - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'station-line';
+                    container.appendChild(line);
+                }
+            });
+        }
+
+        // ==================== 游戏状态 ====================
+        let state = 'ready';
+        let direction = 'left';
+        let autoMode = false;
+        let autoTimer = null;
+
+        const train = document.getElementById('train');
+        const statusText = document.getElementById('statusText');
+        const speedLines = document.getElementById('speedLines');
+
+        const psdDoors = [
+            document.getElementById('pDoor1L'),
+            document.getElementById('pDoor1R'),
+            document.getElementById('pDoor2L'),
+            document.getElementById('pDoor2R')
+        ];
+
+        const trainDoors = [
+            document.getElementById('tDoor1L'),
+            document.getElementById('tDoor1R'),
+            document.getElementById('tDoor2L'),
+            document.getElementById('tDoor2R')
+        ];
+
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnArrive = document.getElementById('btnArrive');
+        const btnOpen = document.getElementById('btnOpen');
+        const btnClose = document.getElementById('btnClose');
+        const btnDepart = document.getElementById('btnDepart');
+        const btnAuto = document.getElementById('btnAuto');
+
+        function setStatus(text, type) {
+            statusText.textContent = text;
+            statusText.className = 'status-indicator' + (type ? ' ' + type : '');
+        }
+
+        function updateButtons() {
+            btnArrive.disabled = state !== 'ready' && state !== 'departed';
+            btnOpen.disabled = state !== 'arrived';
+            btnClose.disabled = state !== 'open';
+            btnDepart.disabled = state !== 'arrived' && state !== 'closing';
+            btnLeft.disabled = state !== 'ready' && state !== 'departed';
+            btnRight.disabled = state !== 'ready' && state !== 'departed';
+        }
+
+        function createSpeedLines() {
+            speedLines.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                const line = document.createElement('div');
+                line.className = 'speed-line';
+                line.style.top = (20 + Math.random() * 60) + '%';
+                line.style.width = (40 + Math.random() * 80) + 'px';
+                line.style.animationDelay = Math.random() * 0.15 + 's';
+                line.style.animationDuration = (0.2 + Math.random() * 0.1) + 's';
+                speedLines.appendChild(line);
+            }
+        }
+
+        function createTunnelLights() {
+            const container = document.getElementById('tunnelLights');
+            for (let i = 0; i < 8; i++) {
+                const light = document.createElement('div');
+                light.className = 'tunnel-light';
+                light.style.left = (15 + i * 10) + '%';
+                light.style.top = (25 + Math.random() * 15) + '%';
+                container.appendChild(light);
+            }
+        }
+
+        // ==================== 方向切换 ====================
+        function setDirection(dir) {
+            if (state !== 'ready' && state !== 'departed') return;
+            
+            direction = dir;
+            
+            // 重置列车位置和类
+            train.classList.remove('dir-left', 'dir-right', 'arrived', 'departed');
+            void train.offsetWidth;
+            
+            if (dir === 'left') {
+                btnLeft.classList.add('active');
+                btnRight.classList.remove('active');
+                train.classList.add('dir-left');
+            } else {
+                btnRight.classList.add('active');
+                btnLeft.classList.remove('active');
+                train.classList.add('dir-right');
+            }
+        }
+
+        // ==================== 核心功能 ====================
+        function doArrive() {
+            if (state !== 'ready' && state !== 'departed') return;
+            
+            state = 'arriving';
+            setStatus('列车进站中...', 'arriving');
+            updateButtons();
+            
+            playDingdong();
+            setTimeout(() => playAnnounce(direction), 800);
+            
+            createSpeedLines();
+            speedLines.classList.add('active');
+            
+            // 确保列车在正确的起始位置，然后动画到中心
+            train.classList.remove('arrived', 'departed');
+            void train.offsetWidth;
+            
+            setTimeout(() => {
+                train.classList.add('arrived');
+            }, 50);
+            
+            setTimeout(() => {
+                speedLines.classList.remove('active');
+                state = 'arrived';
+                setStatus('列车已到达', 'boarding');
+                updateButtons();
+                if (autoMode) autoTimer = setTimeout(doOpen, 1500);
+            }, 3000);
+        }
+
+        function doOpen() {
+            if (state !== 'arrived') return;
+            
+            state = 'open';
+            setStatus('开门中...', 'boarding');
+            updateButtons();
+            
+            playDoorOpen();
+            
+            psdDoors.forEach(door => { if (door) door.classList.add('open'); });
+            trainDoors.forEach(door => { if (door) door.classList.add('open'); });
+            
+            setTimeout(() => {
+                setStatus('上下客中...', 'boarding');
+                if (autoMode) autoTimer = setTimeout(doClose, 4000);
+            }, 1000);
+        }
+
+        function doClose() {
+            if (state !== 'open') return;
+            
+            state = 'closing';
+            setStatus('关门中...', 'departing');
+            updateButtons();
+            
+            playDoorClose();
+            
+            psdDoors.forEach(door => { if (door) door.classList.remove('open'); });
+            trainDoors.forEach(door => { if (door) door.classList.remove('open'); });
+            
+            setTimeout(() => {
+                state = 'arrived';
+                setStatus('车门已关闭', 'departing');
+                updateButtons();
+                if (autoMode) autoTimer = setTimeout(doDepart, 1200);
+            }, 1000);
+        }
+
+        function doDepart() {
+            if (state !== 'arrived' && state !== 'closing') return;
+            
+            state = 'departing';
+            setStatus('列车离站...', 'departing');
+            updateButtons();
+            
+            createSpeedLines();
+            speedLines.classList.add('active');
+            
+            // 从当前停靠位置开始驶出
+            train.classList.remove('arrived');
+            train.classList.add('departed');
+            
+            setTimeout(() => {
+                speedLines.classList.remove('active');
+                state = 'departed';
+                setStatus('列车已离站');
+                updateButtons();
+                
+                // 重置列车到另一侧屏幕外，准备下次进站
+                setTimeout(() => {
+                    train.classList.remove('departed');
+                    void train.offsetWidth;
+                }, 100);
+                
+                if (autoMode) autoTimer = setTimeout(doArrive, 2500);
+            }, 3000);
+        }
+
+        function toggleAuto() {
+            autoMode = !autoMode;
+            
+            if (autoMode) {
+                btnAuto.classList.add('active');
+                btnAuto.textContent = '停止循环';
+                
+                if (state === 'ready' || state === 'departed') {
+                    doArrive();
+                } else if (state === 'arrived') {
+                    doOpen();
+                } else if (state === 'open') {
+                    doClose();
+                }
+            } else {
+                btnAuto.classList.remove('active');
+                btnAuto.textContent = '自动循环';
+                if (autoTimer) {
+                    clearTimeout(autoTimer);
+                    autoTimer = null;
+                }
+            }
+        }
+
+        // ==================== 事件绑定 ====================
+        btnLeft.addEventListener('click', () => setDirection('left'));
+        btnRight.addEventListener('click', () => setDirection('right'));
+        btnArrive.addEventListener('click', doArrive);
+        btnOpen.addEventListener('click', doOpen);
+        btnClose.addEventListener('click', doClose);
+        btnDepart.addEventListener('click', doDepart);
+        btnAuto.addEventListener('click', toggleAuto);
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            createTunnelLights();
+            initRouteLine();
+            updateButtons();
+            setDirection('left');
+        });
+
+        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    </script>
+</body>
+</html>
+            doOpen();
+                } else if (state === 'open') {
+                    doClose();
+                }
+            } else {
+                btnAuto.classList.remove('active');
+                btnAuto.textContent = '自动循环';
+                if (autoTimer) {
+                    clearTimeout(autoTimer);
+                    autoTimer = null;
+                }
+            }
+        }
+
+        // ==================== 事件绑定 ====================
+        btnLeft.addEventListener('click', () => setDirection('left'));
+        btnRight.addEventListener('click', () => setDirection('right'));
+        btnArrive.addEventListener('click', doArrive);
+        btnOpen.addEventListener('click', doOpen);
+        btnClose.addEventListener('click', doClose);
+        btnDepart.addEventListener('click', doDepart);
+        btnAuto.addEventListener('click', toggleAuto);
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            createTunnelLights();
+            initRouteLine();
+            updateButtons();
+            // 默认向左行驶
+            setDirection('left');
+        });
+
+        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    </script>
+</body>
+</html>
