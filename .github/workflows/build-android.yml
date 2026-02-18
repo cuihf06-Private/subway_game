@@ -44,38 +44,51 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build Android APK
-        run: |
-          cd android
-          ./gradlew assembleRelease --no-daemon
-
-      - name: Sign APK with jarsigner
+      - name: Prepare signing config
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
         run: |
-          echo "$SIGNING_KEY" | base64 -d > release.keystore
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore release.keystore \
-            -storepass "$KEY_STORE_PASSWORD" \
-            -keypass "$KEY_PASSWORD" \
-            android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            "$ALIAS"
+          echo "$SIGNING_KEY" | base64 -d > android/app/release.keystore
+          echo "RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "RELEASE_STORE_PASSWORD=$KEY_STORE_PASSWORD" >> android/gradle.properties
+          echo "RELEASE_KEY_ALIAS=$ALIAS" >> android/gradle.properties
+          echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> android/gradle.properties
 
-      - name: Zipalign APK
+      - name: Update build.gradle for signing
         run: |
-          $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
-            android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            subway-simulator-signed.apk
+          cat >> android/app/build.gradle << 'EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file(project.property('RELEASE_STORE_FILE'))
+                      storePassword project.property('RELEASE_STORE_PASSWORD')
+                      keyAlias project.property('RELEASE_KEY_ALIAS')
+                      keyPassword project.property('RELEASE_KEY_PASSWORD')
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+
+      - name: Build signed Android APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK with version
         run: |
           if [ "${{ github.ref_type }}" == "tag" ]; then
-            mv subway-simulator-signed.apk subway-simulator-${{ github.ref_name }}.apk
+            cp android/app/build/outputs/apk/release/app-release.apk subway-simulator-${{ github.ref_name }}.apk
           else
-            mv subway-simulator-signed.apk subway-simulator-${GITHUB_SHA::7}.apk
+            cp android/app/build/outputs/apk/release/app-release.apk subway-simulator-${GITHUB_SHA::7}.apk
           fi
 
       - name: Create Release
