@@ -525,41 +525,216 @@
 
     <script>
         // ==================== 音频 ====================
+        // 音频初始化标志
+        let audioUnlocked = false;
+        let audioLoadedCount = 0;
+        const totalAudios = 5;
+
         // 使用绝对路径并添加预加载
         const dingdong = new Audio('./dingdong.mp3');
         dingdong.preload = 'auto';
+        dingdong.load(); // 强制加载
 
         const announceLeft = new Audio('./announce_left.mp3');
         announceLeft.preload = 'auto';
+        announceLeft.load();
 
         const announceRight = new Audio('./announce_right.mp3');
         announceRight.preload = 'auto';
+        announceRight.load();
 
         const doorOpenSound = new Audio('./door_open.mp3');
         doorOpenSound.preload = 'auto';
+        doorOpenSound.load();
 
         const doorCloseSound = new Audio('./door_close.mp3');
         doorCloseSound.preload = 'auto';
+        doorCloseSound.load();
+
+        // 音频加载状态跟踪
+        const audioLoadStatus = {
+            dingdong: false,
+            announceLeft: false,
+            announceRight: false,
+            doorOpen: false,
+            doorClose: false
+        };
+
+        // 音频加载错误处理
+        dingdong.addEventListener('error', (e) => console.error('叮咚音加载失败:', e));
+        dingdong.addEventListener('canplaythrough', () => {
+            audioLoadStatus.dingdong = true;
+            audioLoadedCount++;
+            console.log('叮咚音加载成功');
+        });
+
+        announceLeft.addEventListener('error', (e) => console.error('左报站音加载失败:', e));
+        announceLeft.addEventListener('canplaythrough', () => {
+            audioLoadStatus.announceLeft = true;
+            audioLoadedCount++;
+            console.log('左报站音加载成功');
+        });
+
+        announceRight.addEventListener('error', (e) => console.error('右报站音加载失败:', e));
+        announceRight.addEventListener('canplaythrough', () => {
+            audioLoadStatus.announceRight = true;
+            audioLoadedCount++;
+            console.log('右报站音加载成功');
+        });
+
+        doorOpenSound.addEventListener('error', (e) => console.error('开门音加载失败:', e));
+        doorOpenSound.addEventListener('canplaythrough', () => {
+            audioLoadStatus.doorOpen = true;
+            audioLoadedCount++;
+            console.log('开门音加载成功');
+        });
+
+        doorCloseSound.addEventListener('error', (e) => console.error('关门音加载失败:', e));
+        doorCloseSound.addEventListener('canplaythrough', () => {
+            audioLoadStatus.doorClose = true;
+            audioLoadedCount++;
+            console.log('关门音加载成功');
+        });
+
+        // 解锁移动端音频播放
+        function unlockAudio() {
+            if (audioUnlocked) return;
+
+            const allAudios = [dingdong, announceLeft, announceRight, doorOpenSound, doorCloseSound];
+
+            // 尝试播放并立即暂停来解锁音频
+            allAudios.forEach(audio => {
+                // 设置音量为0来静默播放
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        audio.volume = originalVolume;
+                    }).catch(() => {
+                        audio.volume = originalVolume;
+                    });
+                }
+            });
+
+            audioUnlocked = true;
+            console.log('音频已解锁');
+
+            // 短暂显示提示
+            const originalStatus = statusText.textContent;
+            setStatus('🔊 音频已启用', '');
+            setTimeout(() => {
+                if (state === 'ready' || state === 'departed') {
+                    setStatus('准备就绪', '');
+                }
+            }, 1500);
+        }
 
         function playDingdong() { // 播放叮咚音
-            dingdong.currentTime = 0; // 重置播放进度
-            dingdong.play().catch(err => console.error('播放叮咚音失败:', err)); // 播放音频
+            if (!audioUnlocked) {
+                console.warn('音频未解锁，尝试解锁...');
+                unlockAudio();
+            }
+
+            // 等待音频加载完成后再播放
+            if (audioLoadStatus.dingdong && dingdong.readyState >= 3) {
+                dingdong.currentTime = 0;
+                const playPromise = dingdong.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('播放叮咚音失败:', err));
+                }
+            } else {
+                console.warn('叮咚音未加载完成，等待加载...');
+                dingdong.addEventListener('canplaythrough', function playWhenReady() {
+                    dingdong.removeEventListener('canplaythrough', playWhenReady);
+                    dingdong.currentTime = 0;
+                    const playPromise = dingdong.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => console.error('播放叮咚音失败:', err));
+                    }
+                }, { once: true });
+            }
         }
 
         function playAnnounce(dir) { // 播放报站音
-            const audio = dir === 'left' ? announceLeft : announceRight; // 根据方向选择音频
-            audio.currentTime = 0; // 重置播放进度
-            audio.play().catch(err => console.error('播放报站音失败:', err)); // 播放音频
+            if (!audioUnlocked) {
+                console.warn('音频未解锁，尝试解锁...');
+                unlockAudio();
+            }
+
+            const audio = dir === 'left' ? announceLeft : announceRight;
+            const statusKey = dir === 'left' ? 'announceLeft' : 'announceRight';
+
+            if (audioLoadStatus[statusKey] && audio.readyState >= 3) {
+                audio.currentTime = 0;
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('播放报站音失败:', err));
+                }
+            } else {
+                console.warn('报站音未加载完成，等待加载...');
+                audio.addEventListener('canplaythrough', function playWhenReady() {
+                    audio.removeEventListener('canplaythrough', playWhenReady);
+                    audio.currentTime = 0;
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => console.error('播放报站音失败:', err));
+                    }
+                }, { once: true });
+            }
         }
 
         function playDoorOpen() { // 播放开门音
-            doorOpenSound.currentTime = 0;
-            doorOpenSound.play().catch(err => console.error('播放开门音失败:', err));
+            if (!audioUnlocked) {
+                console.warn('音频未解锁，尝试解锁...');
+                unlockAudio();
+            }
+
+            if (audioLoadStatus.doorOpen && doorOpenSound.readyState >= 3) {
+                doorOpenSound.currentTime = 0;
+                const playPromise = doorOpenSound.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('播放开门音失败:', err));
+                }
+            } else {
+                console.warn('开门音未加载完成，等待加载...');
+                doorOpenSound.addEventListener('canplaythrough', function playWhenReady() {
+                    doorOpenSound.removeEventListener('canplaythrough', playWhenReady);
+                    doorOpenSound.currentTime = 0;
+                    const playPromise = doorOpenSound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => console.error('播放开门音失败:', err));
+                    }
+                }, { once: true });
+            }
         }
 
         function playDoorClose() { // 播放关门音
-            doorCloseSound.currentTime = 0;
-            doorCloseSound.play().catch(err => console.error('播放关门音失败:', err));
+            if (!audioUnlocked) {
+                console.warn('音频未解锁，尝试解锁...');
+                unlockAudio();
+            }
+
+            if (audioLoadStatus.doorClose && doorCloseSound.readyState >= 3) {
+                doorCloseSound.currentTime = 0;
+                const playPromise = doorCloseSound.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('播放关门音失败:', err));
+                }
+            } else {
+                console.warn('关门音未加载完成，等待加载...');
+                doorCloseSound.addEventListener('canplaythrough', function playWhenReady() {
+                    doorCloseSound.removeEventListener('canplaythrough', playWhenReady);
+                    doorCloseSound.currentTime = 0;
+                    const playPromise = doorCloseSound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => console.error('播放关门音失败:', err));
+                    }
+                }, { once: true });
+            }
         }
 
         // ==================== 线路图 ====================
@@ -824,13 +999,14 @@
         }
 
         // ==================== 事件绑定 ====================
-        btnLeft.addEventListener('click', () => setDirection('left')); // 左按钮点击
-        btnRight.addEventListener('click', () => setDirection('right')); // 右按钮点击
-        btnArrive.addEventListener('click', doArrive); // 进站按钮点击
-        btnOpen.addEventListener('click', doOpen); // 开门按钮点击
-        btnClose.addEventListener('click', doClose); // 关门按钮点击
-        btnDepart.addEventListener('click', doDepart); // 离站按钮点击
-        btnAuto.addEventListener('click', toggleAuto); // 自动按钮点击
+        // 在所有按钮点击时先解锁音频
+        btnLeft.addEventListener('click', () => { unlockAudio(); setDirection('left'); }); // 左按钮点击
+        btnRight.addEventListener('click', () => { unlockAudio(); setDirection('right'); }); // 右按钮点击
+        btnArrive.addEventListener('click', () => { unlockAudio(); doArrive(); }); // 进站按钮点击
+        btnOpen.addEventListener('click', () => { unlockAudio(); doOpen(); }); // 开门按钮点击
+        btnClose.addEventListener('click', () => { unlockAudio(); doClose(); }); // 关门按钮点击
+        btnDepart.addEventListener('click', () => { unlockAudio(); doDepart(); }); // 离站按钮点击
+        btnAuto.addEventListener('click', () => { unlockAudio(); toggleAuto(); }); // 自动按钮点击
 
         // ==================== 初始化 ====================
         document.addEventListener('DOMContentLoaded', () => { // 页面加载完成
@@ -838,6 +1014,10 @@
             initRouteLine(); // 初始化线路图
             updateButtons(); // 更新按钮
             setDirection('left'); // 默认向左行驶
+
+            // 移动端首次触摸解锁音频
+            document.body.addEventListener('touchstart', unlockAudio, { once: true });
+            document.body.addEventListener('click', unlockAudio, { once: true });
         });
 
         document.addEventListener('touchmove', e => e.preventDefault(), { passive: false }); // 禁止页面滑动
