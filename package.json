@@ -1,0 +1,24 @@
+{
+  "name": "subway-simulator",
+  "version": "1.0.0",
+  "description": "地铁模拟器 - Subway Simulator",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build needed for static HTML'",
+    "android": "cap sync android && cap open android"
+  },
+  "keywords": [
+    "subway",
+    "simulator",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/cli": "^5.5.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.5.1",
+    "@capacitor/core": "^5.5.1"
+  }
+}

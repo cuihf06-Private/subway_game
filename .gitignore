@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Capacitor
+android/
+ios/
+.capacitor/
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keystore (keep secure)
+*.keystore
+*.jks
